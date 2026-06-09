@@ -1,0 +1,147 @@
+{
+  "name": "opencluely",
+  "version": "1.0.0",
+  "description": "AI Problem Solving Assistant",
+  "main": "main.js",
+  "scripts": {
+    "start": "env -u ELECTRON_RUN_AS_NODE electron .",
+    "dev": "env -u ELECTRON_RUN_AS_NODE electron . --no-sandbox --disable-gpu",
+    "test-speech": "node scripts/test-speech.js",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder --mac --win --linux",
+    "dist": "npm run build",
+    "pack": "electron-builder --dir",
+    "clean": "rm -rf dist/",
+    "rebuild": "npm run clean && npm run build",
+    "release": "npm run clean && npm run build:all",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "author": {
+    "name": "TechyCSR",
+    "email": "info@techycsr.dev",
+    "url": "https://techycsr.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TechyCSR/OpenCluely"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.2.0",
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^16.3.1",
+    "markdown": "^0.5.0",
+    "marked": "^15.0.12",
+    "microsoft-cognitiveservices-speech-sdk": "^1.40.0",
+    "node-record-lpcm16": "^1.0.1",
+    "prismjs": "^1.30.0",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^4.7.1"
+  },
+  "devDependencies": {
+    "electron": "^29.1.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.opencluely.app",
+    "productName": "OpenCluely",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/**/*",
+      "!*.md",
+      "!.git/**/*",
+      "!.env*"
+    ],
+    "extraFiles": [
+      {
+        "from": "prompts",
+        "to": "prompts"
+      }
+    ],
+    "asarUnpack": [
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "assets/icons/app-icon.icns",
+      "darkModeSupport": true,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ],
+      "icon": "assets/icons/app-icon.ico"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icons/app-icon.png",
+      "category": "Utility"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "dmg": {
+      "title": "OpenCluely Interview Assistant",
+      "backgroundColor": "#000000",
+      "window": {
+        "width": 600,
+        "height": 400
+      }
+    }
+  }
+}
