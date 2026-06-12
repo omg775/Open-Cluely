@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -272,6 +273,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="settings-container">
         <div class="settings-header">
@@ -290,7 +292,7 @@
                 </button>
             </div>
         </div>
-        
+
         <div class="settings-content">
             <div class="settings-section">
                 <div class="settings-section-title">
@@ -355,7 +357,8 @@
                     <div class="settings-item">
                         <div>
                             <div class="settings-item-label">Speech Provider</div>
-                            <div class="settings-item-description">Choose Azure Speech or a local OpenAI Whisper CLI</div>
+                            <div class="settings-item-description">Choose Azure Speech or a local OpenAI Whisper CLI
+                            </div>
                         </div>
                         <select class="input-field" id="speechProvider">
                             <option value="azure">Azure Speech</option>
@@ -380,9 +383,11 @@
                         <div class="settings-stack">
                             <div>
                                 <div class="settings-item-label">Whisper Command</div>
-                                <div class="settings-item-description">CLI command for local Whisper, such as <code>whisper</code> or <code>python3 -m whisper</code></div>
+                                <div class="settings-item-description">CLI command for local Whisper, such as
+                                    <code>whisper</code> or <code>python3 -m whisper</code></div>
                             </div>
-                            <input type="text" class="input-field" id="whisperCommand" placeholder="whisper" style="max-width: 100%;">
+                            <input type="text" class="input-field" id="whisperCommand" placeholder="whisper"
+                                style="max-width: 100%;">
                         </div>
                     </div>
                     <div class="settings-item">
@@ -402,16 +407,19 @@
                     <div class="settings-item">
                         <div>
                             <div class="settings-item-label">Whisper Segment Length</div>
-                            <div class="settings-item-description">Chunk size in milliseconds for local transcription</div>
+                            <div class="settings-item-description">Chunk size in milliseconds for local transcription
+                            </div>
                         </div>
-                        <input type="number" class="input-field" id="whisperSegmentMs" placeholder="4000" min="2000" step="500">
+                        <input type="number" class="input-field" id="whisperSegmentMs" placeholder="4000" min="2000"
+                            step="500">
                     </div>
                     <div class="settings-note">
-                        Local Whisper runs on this machine and needs a Whisper CLI installed. These settings apply immediately for the current app session; use <code>.env</code> for startup defaults.
+                        Local Whisper runs on this machine and needs a Whisper CLI installed. These settings apply
+                        immediately for the current app session; use <code>.env</code> for startup defaults.
                     </div>
                 </div>
             </div>
-            
+
             <div class="settings-section">
                 <div class="settings-section-title">
                     <i class="fas fa-robot"></i>
@@ -423,11 +431,32 @@
                             <div class="settings-item-label">Google API Key</div>
                             <div class="settings-item-description">Your Google API key for Gemini models</div>
                         </div>
-                        <input type="password" class="input-field" id="geminiKey" placeholder="Enter your Google API key">
+                        <input type="password" class="input-field" id="geminiKey"
+                            placeholder="Enter your Google API key">
+                    </div>
+                    <div class="settings-item">
+                        <div>
+                            <div class="settings-item-label">Service Account (JSON path)</div>
+                            <div class="settings-item-description">Path to a Google Cloud service-account JSON keyfile
+                                (optional). If set, the app will prefer bearer-token auth over API key.</div>
+                        </div>
+                        <input type="text" class="input-field" id="geminiServiceAccount"
+                            placeholder="e.g. /Users/you/keys/gemini-sa.json">
+                    </div>
+                    <div class="settings-item">
+                        <div>
+                            <div class="settings-item-label">Test Gemini Credentials</div>
+                            <div class="settings-item-description">Quickly test the configured API key or
+                                service-account by contacting the Gemini endpoint.</div>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <button class="btn" id="testGeminiBtn">Test Credentials</button>
+                            <div id="geminiTestFeedback" style="font-size:12px;color:#ddd;">&nbsp;</div>
+                        </div>
                     </div>
                 </div>
             </div>
-            
+
             <div class="settings-section">
                 <div class="settings-section-title">
                     <i class="fas fa-window-maximize"></i>
@@ -448,4 +477,5 @@
 
     <script src="./src/ui/settings-window.js"></script>
 </body>
+
 </html>

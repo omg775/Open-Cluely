@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {    
+document.addEventListener('DOMContentLoaded', () => {
     const logger = {
         info: (...args) => console.log('[SettingsWindowUI]', ...args)
     };
@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const whisperLanguageInput = document.getElementById('whisperLanguage');
     const whisperSegmentMsInput = document.getElementById('whisperSegmentMs');
     const geminiKeyInput = document.getElementById('geminiKey');
+    const geminiServiceAccountInput = document.getElementById('geminiServiceAccount');
+    const testGeminiBtn = document.getElementById('testGeminiBtn');
+    const geminiTestFeedback = document.getElementById('geminiTestFeedback');
     const windowGapInput = document.getElementById('windowGap');
     const codingLanguageSelect = document.getElementById('codingLanguage');
     const activeSkillSelect = document.getElementById('activeSkill');
@@ -51,17 +54,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (window.api && window.api.send) {
                     window.api.send('quit-app');
                 }
-                
+
                 // Also try the electron API if available
                 if (window.electronAPI && window.electronAPI.quit) {
                     window.electronAPI.quit();
                 }
-                
+
                 // Fallback: close the window
                 setTimeout(() => {
                     window.close();
                 }, 500);
-                
+
             } catch (error) {
                 console.error('Error quitting app:', error);
                 window.close();
@@ -79,15 +82,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (settings.whisperLanguage && whisperLanguageInput) whisperLanguageInput.value = settings.whisperLanguage;
         if (settings.whisperSegmentMs && whisperSegmentMsInput) whisperSegmentMsInput.value = settings.whisperSegmentMs;
         if (settings.geminiKey && geminiKeyInput) geminiKeyInput.value = settings.geminiKey;
+        if (settings.geminiServiceAccount && geminiServiceAccountInput) geminiServiceAccountInput.value = settings.geminiServiceAccount;
         if (settings.windowGap && windowGapInput) windowGapInput.value = settings.windowGap;
-        
+
         // Set C++ as default if no coding language is specified
         if (codingLanguageSelect) {
             codingLanguageSelect.value = settings.codingLanguage || 'cpp';
         }
-        
+
         if (settings.activeSkill && activeSkillSelect) activeSkillSelect.value = settings.activeSkill;
-        
+
         // Handle icon selection
         const selectedIcon = settings.selectedIcon || settings.appIcon;
         if (selectedIcon && iconGrid) {
@@ -115,13 +119,13 @@ document.addEventListener('DOMContentLoaded', () => {
             requestCurrentSettings();
         });
 
-    // Listen for coding language changes from other windows via helper
-    window.electronAPI.onCodingLanguageChanged((event, data) => {
+        // Listen for coding language changes from other windows via helper
+        window.electronAPI.onCodingLanguageChanged((event, data) => {
             if (data && data.language && codingLanguageSelect) {
                 codingLanguageSelect.value = data.language;
                 console.log('Language updated from overlay window:', data.language);
             }
-    });
+        });
     }
 
     // Save settings helper function
@@ -135,10 +139,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (whisperLanguageInput) settings.whisperLanguage = whisperLanguageInput.value;
         if (whisperSegmentMsInput) settings.whisperSegmentMs = whisperSegmentMsInput.value;
         if (geminiKeyInput) settings.geminiKey = geminiKeyInput.value;
+        if (geminiServiceAccountInput) settings.geminiServiceAccount = geminiServiceAccountInput.value;
         if (windowGapInput) settings.windowGap = windowGapInput.value;
         if (codingLanguageSelect) settings.codingLanguage = codingLanguageSelect.value;
         if (activeSkillSelect) settings.activeSkill = activeSkillSelect.value;
-        
+
         window.api.send('save-settings', settings);
     };
 
@@ -166,6 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
         whisperLanguageInput,
         whisperSegmentMsInput,
         geminiKeyInput,
+        geminiServiceAccountInput,
         windowGapInput
     ];
 
@@ -175,6 +181,23 @@ document.addEventListener('DOMContentLoaded', () => {
             input.addEventListener('blur', saveSettings);
         }
     });
+
+    if (testGeminiBtn) {
+        testGeminiBtn.addEventListener('click', async () => {
+            if (geminiTestFeedback) geminiTestFeedback.textContent = 'Testing...';
+            try {
+                const result = await window.electronAPI.testGeminiConnection();
+                if (result && result.success) {
+                    if (geminiTestFeedback) geminiTestFeedback.textContent = 'Success — connection OK';
+                } else {
+                    if (geminiTestFeedback) geminiTestFeedback.textContent = `Failed: ${result?.error || JSON.stringify(result)}`;
+                }
+            } catch (e) {
+                if (geminiTestFeedback) geminiTestFeedback.textContent = `Error: ${e.message}`;
+            }
+            setTimeout(() => { if (geminiTestFeedback) geminiTestFeedback.textContent = ' '; }, 5000);
+        });
+    }
 
     if (speechProviderSelect) {
         speechProviderSelect.addEventListener('change', () => {
@@ -224,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const iconElement = document.createElement('div');
             iconElement.className = 'icon-option';
             iconElement.dataset.icon = icon.key;
-            
+
             const img = document.createElement('img');
             img.src = icon.src;
             img.alt = icon.name;
@@ -239,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     `./assets/icons/${icon.key}.png`,
                     `./assets/${icon.key}.png`
                 ];
-                
+
                 let pathIndex = 0;
                 const tryNextPath = () => {
                     if (pathIndex < altPaths.length) {
@@ -250,41 +273,41 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.error('All icon paths failed for:', icon.key);
                     }
                 };
-                
+
                 img.onload = () => {
                     logger.info('Icon loaded with alternative path:', img.src);
                 };
-                
+
                 img.onerror = tryNextPath;
                 tryNextPath();
             };
-            
+
             const label = document.createElement('div');
             label.textContent = icon.name;
-            
+
             iconElement.appendChild(img);
             iconElement.appendChild(label);
-            
+
             // Click handler for icon selection
-            iconElement.addEventListener('click', () => {                
+            iconElement.addEventListener('click', () => {
                 // Remove selection from all icons
                 iconGrid.querySelectorAll('.icon-option').forEach(opt => {
                     opt.classList.remove('selected');
                 });
-                
+
                 // Add selection to clicked icon
                 iconElement.classList.add('selected');
-                
+
                 // Save the selection - this should trigger the app icon change
                 window.api.send('save-settings', { selectedIcon: icon.key });
-                
+
                 // Show visual feedback
                 iconElement.style.transform = 'scale(0.95)';
                 setTimeout(() => {
                     iconElement.style.transform = 'scale(1)';
                 }, 100);
             });
-            
+
             iconGrid.appendChild(iconElement);
         });
     };

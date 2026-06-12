@@ -25,8 +25,8 @@ class ApplicationController {
   constructor() {
     this.isReady = false;
     this.activeSkill = "dsa";
-  // Default to C++ so language is enforced from first run
-  this.codingLanguage = "cpp";
+    // Default to C++ so language is enforced from first run
+    this.codingLanguage = "cpp";
     this.speechAvailable = false;
 
     // Window configurations for reference
@@ -39,6 +39,13 @@ class ApplicationController {
 
     this.setupStealth();
     this.setupEventHandlers();
+
+    // Load persisted settings (including Gemini key) as soon as controller is constructed
+    try {
+      this.loadPersistedSettings();
+    } catch (e) {
+      logger.debug('No persisted settings loaded at startup', { error: e.message });
+    }
   }
 
   setupStealth() {
@@ -149,7 +156,7 @@ class ApplicationController {
   setupNetworkConfiguration() {
     // Configure session to handle network requests better
     const ses = session.defaultSession;
-    
+
     // Allow HTTPS requests to Google APIs
     ses.webRequest.onBeforeSendHeaders((details, callback) => {
       if (details.url.includes('generativelanguage.googleapis.com')) {
@@ -157,7 +164,7 @@ class ApplicationController {
       }
       callback({ requestHeaders: details.requestHeaders });
     });
-    
+
     // Handle certificate errors for Google APIs
     ses.setCertificateVerifyProc((request, callback) => {
       if (request.hostname === 'generativelanguage.googleapis.com') {
@@ -166,7 +173,7 @@ class ApplicationController {
         callback(-2); // Use default verification
       }
     });
-    
+
     logger.debug('Network configuration applied for Gemini API');
   }
 
@@ -223,16 +230,16 @@ class ApplicationController {
       });
     });
 
-    speechService.on("transcription", (text) => {      
+    speechService.on("transcription", (text) => {
       // Add transcription to session memory
       sessionManager.addUserInput(text, 'speech');
-      
+
       const windows = BrowserWindow.getAllWindows();
-      
+
       windows.forEach((window) => {
         window.webContents.send("transcription-received", { text });
       });
-      
+
       // Automatically process transcription with LLM for intelligent response
       setTimeout(async () => {
         try {
@@ -274,10 +281,10 @@ class ApplicationController {
   }
 
   setupIPCHandlers() {
-  ipcMain.handle("take-screenshot", () => this.triggerScreenshotOCR());
-  ipcMain.handle("list-displays", () => captureService.listDisplays());
-  ipcMain.handle("capture-area", (event, options) => captureService.captureAndProcess(options));
-    
+    ipcMain.handle("take-screenshot", () => this.triggerScreenshotOCR());
+    ipcMain.handle("list-displays", () => captureService.listDisplays());
+    ipcMain.handle("capture-area", (event, options) => captureService.captureAndProcess(options));
+
     // Provide reliable clipboard write via main process
     ipcMain.handle("copy-to-clipboard", (event, text) => {
       try {
@@ -289,7 +296,7 @@ class ApplicationController {
         return false;
       }
     });
-    
+
     ipcMain.handle("get-speech-availability", () => {
       return speechService.isAvailable ? speechService.isAvailable() : false;
     });
@@ -418,7 +425,7 @@ class ApplicationController {
       // Add chat message to session memory
       sessionManager.addUserInput(text, 'chat');
       logger.debug('Chat message added to session memory', { textLength: text.length });
-      
+
       // Process typed message with LLM in the same way as transcribed text
       setTimeout(async () => {
         try {
@@ -431,7 +438,7 @@ class ApplicationController {
           });
         }
       }, 500);
-      
+
       return { success: true };
     });
 
@@ -447,8 +454,9 @@ class ApplicationController {
     });
 
     ipcMain.handle("set-gemini-api-key", (event, apiKey) => {
-      llmService.updateApiKey(apiKey);
-      return llmService.getStats();
+      const result = llmService.updateApiKey(apiKey);
+      const stats = llmService.getStats();
+      return Object.assign({ success: !!result.success }, stats, result.error ? { error: result.error } : {});
     });
 
     ipcMain.handle("get-gemini-status", () => {
@@ -489,7 +497,7 @@ class ApplicationController {
       try {
         const connectivity = await llmService.checkNetworkConnectivity();
         const apiTest = await llmService.testConnection();
-        
+
         return {
           success: true,
           connectivity,
@@ -636,7 +644,7 @@ class ApplicationController {
       try {
         windowManager.broadcastToAllWindows("speech-status", { status: 'Speech recognition unavailable', available: false });
         windowManager.broadcastToAllWindows("speech-availability", { available: false });
-      } catch (e) {}
+      } catch (e) { }
       return;
     }
     const currentStatus = speechService.getStatus();
@@ -762,7 +770,7 @@ class ApplicationController {
     try {
       windowManager.showLLMLoading();
 
-  const capture = await captureService.captureAndProcess();
+      const capture = await captureService.captureAndProcess();
 
       if (!capture.imageBuffer || !capture.imageBuffer.length) {
         windowManager.hideLLMResponse();
@@ -808,7 +816,7 @@ class ApplicationController {
 
       windowManager.hideLLMResponse();
       this.broadcastOCRError(error.message);
-      
+
       sessionManager.addConversationEvent({
         role: 'system',
         content: `Screenshot OCR failed: ${error.message}`,
@@ -828,7 +836,7 @@ class ApplicationController {
       // Check if current skill needs programming language context
       const skillsRequiringProgrammingLanguage = ['dsa'];
       const needsProgrammingLanguage = skillsRequiringProgrammingLanguage.includes(this.activeSkill);
-      
+
       const llmResult = await llmService.processTextWithSkill(
         text,
         this.activeSkill,
@@ -952,7 +960,7 @@ class ApplicationController {
       // Try to provide a fallback response
       try {
         const fallbackResult = llmService.generateIntelligentFallbackResponse(text, this.activeSkill);
-        
+
         sessionManager.addModelResponse(fallbackResult.response, {
           skill: this.activeSkill,
           processingTime: fallbackResult.metadata.processingTime,
@@ -962,7 +970,7 @@ class ApplicationController {
         });
 
         this.broadcastTranscriptionLLMResponse(fallbackResult);
-        
+
         // Show the fallback response in the LLM window
         windowManager.showLLMResponse(fallbackResult.response, {
           skill: this.activeSkill,
@@ -975,7 +983,7 @@ class ApplicationController {
           skill: this.activeSkill,
           fallbackResponse: fallbackResult.response
         });
-        
+
       } catch (fallbackError) {
         logger.error("Fallback response also failed", {
           fallbackError: fallbackError.message
@@ -1088,17 +1096,49 @@ class ApplicationController {
   }
 
   getSettings() {
-    return {
-      codingLanguage: this.codingLanguage || "cpp", // Default to C++
-      activeSkill: this.activeSkill || "dsa",
-      appIcon: this.appIcon || "terminal",
-      selectedIcon: this.appIcon || "terminal",
-      // pass through env-derived settings for UI convenience (masked)
-      azureConfigured: !!process.env.AZURE_SPEECH_KEY && !!process.env.AZURE_SPEECH_REGION,
-      speechAvailable: this.speechAvailable
-    };
+    // Merge persisted settings (if any) with runtime defaults for the UI
+    try {
+      const { app } = require('electron');
+      const path = require('path');
+      const fs = require('fs');
+
+      const userDir = app.getPath('userData');
+      const settingsPath = path.join(userDir, 'settings.json');
+
+      let persisted = {};
+      try {
+        if (fs.existsSync(settingsPath)) {
+          persisted = JSON.parse(fs.readFileSync(settingsPath, 'utf8') || '{}');
+        }
+      } catch (e) {
+        persisted = {};
+      }
+
+      return {
+        codingLanguage: this.codingLanguage || persisted.codingLanguage || "cpp",
+        activeSkill: this.activeSkill || persisted.activeSkill || "dsa",
+        appIcon: this.appIcon || persisted.appIcon || "terminal",
+        selectedIcon: this.appIcon || persisted.selectedIcon || "terminal",
+        // pass through env-derived settings for UI convenience (masked)
+        azureConfigured: !!process.env.AZURE_SPEECH_KEY && !!process.env.AZURE_SPEECH_REGION,
+        speechAvailable: this.speechAvailable,
+        // include persisted geminiKey if present (UI expects to populate field)
+        geminiKey: persisted.geminiKey || null,
+        geminiServiceAccount: persisted.geminiServiceAccount || null
+      };
+    } catch (error) {
+      return {
+        codingLanguage: this.codingLanguage || "cpp",
+        activeSkill: this.activeSkill || "dsa",
+        appIcon: this.appIcon || "terminal",
+        selectedIcon: this.appIcon || "terminal",
+        azureConfigured: !!process.env.AZURE_SPEECH_KEY && !!process.env.AZURE_SPEECH_REGION,
+        speechAvailable: this.speechAvailable,
+        geminiKey: null
+      };
+    }
   }
-  
+
   saveSettings(settings) {
     try {
       // Update application settings
@@ -1130,6 +1170,24 @@ class ApplicationController {
       // Persist settings to file or config
       this.persistSettings(settings);
 
+      // If user supplied a Gemini key via settings UI, apply it immediately
+      if (settings.geminiKey) {
+        try {
+          llmService.updateApiKey(settings.geminiKey);
+        } catch (e) {
+          logger.error('Failed to apply Gemini API key from settings', { error: e.message });
+        }
+      }
+      // If user supplied a Gemini service-account path, apply it (persisted and runtime)
+      if (settings.geminiServiceAccount) {
+        try {
+          // Mirror into env so llm.service can pick it up
+          process.env.GEMINI_SERVICE_ACCOUNT = settings.geminiServiceAccount;
+        } catch (e) {
+          logger.error('Failed to apply Gemini service account from settings', { error: e.message });
+        }
+      }
+
       logger.info("Settings saved successfully", settings);
       return { success: true };
     } catch (error) {
@@ -1139,9 +1197,97 @@ class ApplicationController {
   }
 
   persistSettings(settings) {
-    // You can extend this to save to a file or database
-    // For now, we'll just keep them in memory
-    logger.debug("Settings persisted", settings);
+    try {
+      const { app } = require('electron');
+      const path = require('path');
+      const fs = require('fs');
+
+      const userDir = app.getPath('userData');
+      const settingsPath = path.join(userDir, 'settings.json');
+
+      // Read existing settings, merge, and write atomically
+      let existing = {};
+      try {
+        if (fs.existsSync(settingsPath)) {
+          const raw = fs.readFileSync(settingsPath, 'utf8');
+          existing = JSON.parse(raw || '{}');
+        }
+      } catch (e) {
+        // ignore parse errors and overwrite
+        existing = {};
+      }
+
+      const merged = Object.assign({}, existing, settings);
+
+      // Ensure directory exists
+      try {
+        fs.mkdirSync(userDir, { recursive: true });
+      } catch (e) { }
+
+      fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2), { mode: 0o600 });
+
+      // Do not log sensitive values like API keys
+      const safeLog = Object.assign({}, settings);
+      if (safeLog.geminiKey) safeLog.geminiKey = '***REDACTED***';
+      if (safeLog.geminiServiceAccount) safeLog.geminiServiceAccount = '***REDACTED***';
+      logger.debug('Settings persisted to disk', { path: settingsPath, settings: safeLog });
+    } catch (error) {
+      logger.error('Failed to persist settings', { error: error.message });
+    }
+  }
+
+  loadPersistedSettings() {
+    try {
+      const { app } = require('electron');
+      const path = require('path');
+      const fs = require('fs');
+
+      const userDir = app.getPath('userData');
+      const settingsPath = path.join(userDir, 'settings.json');
+
+      if (!fs.existsSync(settingsPath)) return null;
+
+      const raw = fs.readFileSync(settingsPath, 'utf8');
+      const persisted = JSON.parse(raw || '{}');
+
+      // Apply persisted values into controller state where applicable
+      if (persisted.codingLanguage) this.codingLanguage = persisted.codingLanguage;
+      if (persisted.activeSkill) this.activeSkill = persisted.activeSkill;
+      if (persisted.appIcon) this.appIcon = persisted.appIcon;
+
+      // If a gemini key was stored, apply it to llmService
+      if (persisted.geminiKey) {
+        try {
+          llmService.updateApiKey(persisted.geminiKey);
+        } catch (e) {
+          logger.error('Failed to apply persisted Gemini key at startup', { error: e.message });
+        }
+      }
+
+      // If a gemini service account path was stored, set env and attempt a background connectivity test
+      if (persisted.geminiServiceAccount) {
+        try {
+          process.env.GEMINI_SERVICE_ACCOUNT = persisted.geminiServiceAccount;
+          // Run a non-blocking test to warm up token cache (do not block startup)
+          (async () => {
+            try {
+              const test = await llmService.testConnection();
+              logger.debug('Background Gemini service-account test result', { result: test });
+            } catch (e) {
+              logger.debug('Background Gemini test failed', { error: e.message });
+            }
+          })();
+        } catch (e) {
+          logger.error('Failed to apply persisted Gemini service-account at startup', { error: e.message });
+        }
+      }
+
+      logger.info('Persisted settings loaded', { path: settingsPath, keys: Object.keys(persisted) });
+      return persisted;
+    } catch (error) {
+      logger.error('Failed to load persisted settings', { error: error.message });
+      return null;
+    }
   }
 
   updateAppIcon(iconKey) {

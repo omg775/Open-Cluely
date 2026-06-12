@@ -8,7 +8,7 @@ if (typeof window === 'undefined') {
         getUserMedia: () => Promise.resolve({
           getAudioTracks: () => [],
           getTracks: () => [],
-          stop: () => {}
+          stop: () => { }
         }),
         getSupportedConstraints: () => ({
           audio: true,
@@ -33,30 +33,30 @@ if (typeof window === 'undefined') {
     document: {
       createElement: (tagName) => {
         const element = {
-          addEventListener: () => {},
-          removeEventListener: () => {},
-          setAttribute: () => {},
+          addEventListener: () => { },
+          removeEventListener: () => { },
+          setAttribute: () => { },
           getAttribute: () => null,
           style: {},
           tagName: tagName.toUpperCase(),
           nodeType: 1,
           nodeName: tagName.toUpperCase(),
-          appendChild: () => {},
-          removeChild: () => {},
-          insertBefore: () => {},
+          appendChild: () => { },
+          removeChild: () => { },
+          insertBefore: () => { },
           cloneNode: () => element,
           hasAttribute: () => false,
-          removeAttribute: () => {},
-          click: () => {},
-          focus: () => {},
-          blur: () => {}
+          removeAttribute: () => { },
+          click: () => { },
+          focus: () => { },
+          blur: () => { }
         };
 
         if (tagName.toLowerCase() === 'audio') {
           Object.assign(element, {
             play: () => Promise.resolve(),
-            pause: () => {},
-            load: () => {},
+            pause: () => { },
+            load: () => { },
             canPlayType: () => 'probably',
             volume: 1,
             muted: false,
@@ -86,15 +86,15 @@ if (typeof window === 'undefined') {
       querySelector: () => null,
       querySelectorAll: () => [],
       body: {
-        appendChild: () => {},
-        removeChild: () => {},
-        insertBefore: () => {},
+        appendChild: () => { },
+        removeChild: () => { },
+        insertBefore: () => { },
         style: {}
       },
       head: {
-        appendChild: () => {},
-        removeChild: () => {},
-        insertBefore: () => {},
+        appendChild: () => { },
+        removeChild: () => { },
+        insertBefore: () => { },
         style: {}
       }
     },
@@ -109,8 +109,8 @@ if (typeof window === 'undefined') {
       hash: '',
       origin: 'file://'
     },
-    addEventListener: () => {},
-    removeEventListener: () => {},
+    addEventListener: () => { },
+    removeEventListener: () => { },
     setTimeout: global.setTimeout,
     clearTimeout: global.clearTimeout,
     setInterval: global.setInterval,
@@ -118,11 +118,11 @@ if (typeof window === 'undefined') {
     requestAnimationFrame: (callback) => global.setTimeout(callback, 16),
     cancelAnimationFrame: global.clearTimeout,
     console: global.console || {
-      log: () => {},
-      error: () => {},
-      warn: () => {},
-      info: () => {},
-      debug: () => {}
+      log: () => { },
+      error: () => { },
+      warn: () => { },
+      info: () => { },
+      debug: () => { }
     },
     AudioContext: class AudioContext {
       constructor() {
@@ -130,12 +130,12 @@ if (typeof window === 'undefined') {
         this.sampleRate = 16000;
         this.currentTime = 0;
         this.listener = {
-          setPosition: () => {},
-          setOrientation: () => {}
+          setPosition: () => { },
+          setOrientation: () => { }
         };
         this.destination = {
-          connect: () => {},
-          disconnect: () => {},
+          connect: () => { },
+          disconnect: () => { },
           channelCount: 2,
           channelCountMode: 'explicit',
           channelInterpretation: 'speakers'
@@ -143,27 +143,27 @@ if (typeof window === 'undefined') {
       }
       createMediaStreamSource(stream) {
         return {
-          connect: () => {},
-          disconnect: () => {},
+          connect: () => { },
+          disconnect: () => { },
           mediaStream: stream
         };
       }
       createGain() {
         return {
-          connect: () => {},
-          disconnect: () => {},
+          connect: () => { },
+          disconnect: () => { },
           gain: {
             value: 1,
-            setValueAtTime: () => {},
-            linearRampToValueAtTime: () => {},
-            exponentialRampToValueAtTime: () => {}
+            setValueAtTime: () => { },
+            linearRampToValueAtTime: () => { },
+            exponentialRampToValueAtTime: () => { }
           }
         };
       }
       createScriptProcessor(bufferSize = 4096, inputChannels = 1, outputChannels = 1) {
         return {
-          connect: () => {},
-          disconnect: () => {},
+          connect: () => { },
+          disconnect: () => { },
           onaudioprocess: null,
           bufferSize,
           numberOfInputs: inputChannels,
@@ -172,17 +172,17 @@ if (typeof window === 'undefined') {
       }
       createAnalyser() {
         return {
-          connect: () => {},
-          disconnect: () => {},
+          connect: () => { },
+          disconnect: () => { },
           fftSize: 2048,
           frequencyBinCount: 1024,
           minDecibels: -100,
           maxDecibels: -30,
           smoothingTimeConstant: 0.8,
-          getByteFrequencyData: () => {},
-          getByteTimeDomainData: () => {},
-          getFloatFrequencyData: () => {},
-          getFloatTimeDomainData: () => {}
+          getByteFrequencyData: () => { },
+          getByteTimeDomainData: () => { },
+          getFloatFrequencyData: () => { },
+          getFloatTimeDomainData: () => { }
         };
       }
       decodeAudioData() {
@@ -213,12 +213,12 @@ if (typeof window === 'undefined') {
         this.sampleRate = 16000;
         this.currentTime = 0;
         this.listener = {
-          setPosition: () => {},
-          setOrientation: () => {}
+          setPosition: () => { },
+          setOrientation: () => { }
         };
         this.destination = {
-          connect: () => {},
-          disconnect: () => {},
+          connect: () => { },
+          disconnect: () => { },
           channelCount: 2,
           channelCountMode: 'explicit',
           channelInterpretation: 'speakers'
@@ -226,27 +226,27 @@ if (typeof window === 'undefined') {
       }
       createMediaStreamSource(stream) {
         return {
-          connect: () => {},
-          disconnect: () => {},
+          connect: () => { },
+          disconnect: () => { },
           mediaStream: stream
         };
       }
       createGain() {
         return {
-          connect: () => {},
-          disconnect: () => {},
+          connect: () => { },
+          disconnect: () => { },
           gain: {
             value: 1,
-            setValueAtTime: () => {},
-            linearRampToValueAtTime: () => {},
-            exponentialRampToValueAtTime: () => {}
+            setValueAtTime: () => { },
+            linearRampToValueAtTime: () => { },
+            exponentialRampToValueAtTime: () => { }
           }
         };
       }
       createScriptProcessor(bufferSize = 4096, inputChannels = 1, outputChannels = 1) {
         return {
-          connect: () => {},
-          disconnect: () => {},
+          connect: () => { },
+          disconnect: () => { },
           onaudioprocess: null,
           bufferSize,
           numberOfInputs: inputChannels,
@@ -255,17 +255,17 @@ if (typeof window === 'undefined') {
       }
       createAnalyser() {
         return {
-          connect: () => {},
-          disconnect: () => {},
+          connect: () => { },
+          disconnect: () => { },
           fftSize: 2048,
           frequencyBinCount: 1024,
           minDecibels: -100,
           maxDecibels: -30,
           smoothingTimeConstant: 0.8,
-          getByteFrequencyData: () => {},
-          getByteTimeDomainData: () => {},
-          getFloatFrequencyData: () => {},
-          getFloatTimeDomainData: () => {}
+          getByteFrequencyData: () => { },
+          getByteTimeDomainData: () => { },
+          getFloatFrequencyData: () => { },
+          getFloatTimeDomainData: () => { }
         };
       }
       decodeAudioData() {
@@ -358,10 +358,10 @@ if (typeof window === 'undefined') {
   if (!global.performance) {
     global.performance = {
       now: () => Date.now(),
-      mark: () => {},
-      measure: () => {},
-      clearMarks: () => {},
-      clearMeasures: () => {},
+      mark: () => { },
+      measure: () => { },
+      clearMarks: () => { },
+      clearMeasures: () => { },
       getEntriesByName: () => [],
       getEntriesByType: () => []
     };
@@ -447,6 +447,9 @@ class SpeechService extends EventEmitter {
       return;
     }
 
+    // Track whether we've already attempted an automatic Azure->Whisper fallback
+    this._azureFallbackAttempted = false;
+
     if (provider === 'whisper') {
       this._initializeWhisperClient();
       return;
@@ -461,10 +464,6 @@ class SpeechService extends EventEmitter {
     try {
       if (!sdk) {
         throw new Error('Azure Speech SDK dependency is not installed');
-      }
-
-      if (!recorder || typeof recorder.record !== 'function') {
-        throw new Error('Local microphone recorder dependency is not installed');
       }
 
       const subscriptionKey = this._getSetting('azureKey') || process.env.AZURE_SPEECH_KEY;
@@ -587,10 +586,26 @@ class SpeechService extends EventEmitter {
     this._cleanup();
 
     try {
-      this.pushStream = sdk.AudioInputStream.createPushStream();
-      this.audioConfig = sdk.AudioConfig.fromStreamInput(this.pushStream);
-      this._startMicrophoneCapture();
-      this.recognizer = new sdk.SpeechRecognizer(this.speechConfig, this.audioConfig);
+      // Prefer using a pushStream + node-record capture to ensure microphone works
+      // from the main process (Electron). This is more reliable across macOS/Linux.
+      if (recorder && typeof recorder.record === 'function') {
+        try {
+          this.pushStream = sdk.AudioInputStream.createPushStream();
+          this.audioConfig = sdk.AudioConfig.fromStreamInput(this.pushStream);
+          this._startMicrophoneCapture();
+          this.recognizer = new sdk.SpeechRecognizer(this.speechConfig, this.audioConfig);
+        } catch (pushErr) {
+          logger.warn('PushStream capture failed, attempting native SDK microphone input', { error: pushErr.message });
+          // Try native SDK microphone input as a fallback
+          this.audioConfig = sdk.AudioConfig.fromDefaultMicrophoneInput();
+          this.recognizer = new sdk.SpeechRecognizer(this.speechConfig, this.audioConfig);
+        }
+      } else {
+        // If recorder lib is unavailable, attempt SDK native mic input
+        logger.warn('node-record-lpcm16 unavailable; attempting SDK native microphone input');
+        this.audioConfig = sdk.AudioConfig.fromDefaultMicrophoneInput();
+        this.recognizer = new sdk.SpeechRecognizer(this.speechConfig, this.audioConfig);
+      }
     } catch (error) {
       logger.error('Failed to start Azure recording session', { error: error.message });
       this.emit('error', `Audio configuration failed: ${error.message}`);
@@ -629,8 +644,31 @@ class SpeechService extends EventEmitter {
         const details = e.errorDetails || '';
         if (details.includes('1006')) {
           this.emit('error', 'Network connection failed. Please check your internet connection.');
+          // Attempt automatic fallback to Whisper on network errors
+          if (!this._azureFallbackAttempted) {
+            this._azureFallbackAttempted = true;
+            logger.info('Azure network error detected, attempting automatic fallback to Whisper');
+            // Switch provider and re-initialize to Whisper
+            this.runtimeSettings['speechProvider'] = 'whisper';
+            try {
+              this.initializeClient();
+              // Start whisper recording automatically if we were recording
+              if (this.isRecording) {
+                this._startWhisperRecording();
+              }
+            } catch (fbErr) {
+              logger.error('Automatic fallback to Whisper failed', { error: fbErr.message });
+            }
+          }
         } else if (details.includes('InvalidServiceCredentials')) {
           this.emit('error', 'Invalid Azure Speech credentials. Please check AZURE_SPEECH_KEY and AZURE_SPEECH_REGION.');
+          // If credentials invalid, try fallback once
+          if (!this._azureFallbackAttempted) {
+            this._azureFallbackAttempted = true;
+            logger.info('Azure credentials invalid, attempting automatic fallback to Whisper');
+            this.runtimeSettings['speechProvider'] = 'whisper';
+            try { this.initializeClient(); if (this.isRecording) { this._startWhisperRecording(); } } catch (fbErr) { logger.error('Automatic fallback to Whisper failed', { error: fbErr.message }); }
+          }
         } else if (details.includes('Forbidden')) {
           this.emit('error', 'Access denied. Please check your Azure Speech service subscription and region.');
         } else if (details.includes('AudioInputMicrophone_InitializationFailure')) {
@@ -803,14 +841,14 @@ class SpeechService extends EventEmitter {
 
     // Stop sox recording process
     if (this._soxProcess) {
-      try { this._soxProcess.kill('SIGTERM'); } catch (_) {}
+      try { this._soxProcess.kill('SIGTERM'); } catch (_) { }
       this._soxProcess = null;
       // Give sox a moment to flush the WAV file
       await new Promise((r) => setTimeout(r, 500));
     }
 
     if (this.recording) {
-      try { this.recording.stop(); } catch (_) {}
+      try { this.recording.stop(); } catch (_) { }
       this.recording = null;
     }
 
@@ -852,11 +890,11 @@ class SpeechService extends EventEmitter {
       this.silenceTimer = null;
     }
     if (this._soxProcess) {
-      try { this._soxProcess.kill('SIGTERM'); } catch (_) {}
+      try { this._soxProcess.kill('SIGTERM'); } catch (_) { }
       this._soxProcess = null;
     }
     if (this._whisperTempDir) {
-      try { fs.rmSync(this._whisperTempDir, { recursive: true, force: true }); } catch (_) {}
+      try { fs.rmSync(this._whisperTempDir, { recursive: true, force: true }); } catch (_) { }
       this._whisperTempDir = null;
       this._whisperTempWav = null;
     }
@@ -906,6 +944,7 @@ class SpeechService extends EventEmitter {
     this.transcriptionInFlight = false;
     this.pendingFlush = false;
     this._audioDataLogged = false;
+    this._azureFallbackAttempted = false;
   }
 
   async recognizeFromFile(audioFilePath) {

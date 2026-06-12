@@ -1,107 +1,88 @@
+// Load environment variables immediately from project root
 const path = require('path');
-const os = require('os');
+require('dotenv').config({ path: path.resolve(process.cwd(), '.env') });
 
-class ConfigManager {
-  constructor() {
-    this.env = process.env.NODE_ENV || 'development';
-    this.appDataDir = path.join(os.homedir(), '.OpenCluely');
-    this.loadConfiguration();
+const defaults = {
+  llm: {
+    gemini: {
+      model: process.env.GEMINI_MODEL || process.env.GEMINI_MODEL_NAME || 'gemini-pro',
+      timeout: Number(process.env.GEMINI_TIMEOUT || process.env.LLM_TIMEOUT || 10000),
+      maxRetries: Number(process.env.GEMINI_MAX_RETRIES || process.env.LLM_MAX_RETRIES || 3),
+      enableFallbackMethod: (process.env.GEMINI_ENABLE_FALLBACK === 'true') || false,
+      fallbackEnabled: (process.env.GEMINI_FALLBACK_ENABLED === 'true') || false,
+      generation: undefined
+    }
+  },
+
+  speech: {
+    whisper: {
+      model: process.env.WHISPER_MODEL || 'base',
+      language: process.env.WHISPER_LANGUAGE || 'en',
+      segmentMs: Number(process.env.WHISPER_SEGMENT_MS || 4000)
+    },
+    azure: {
+      language: process.env.AZURE_SPEECH_LANGUAGE || 'en-US'
+    }
+  },
+
+  app: {
+    version: process.env.APP_VERSION || '0.0.0',
+    isDevelopment: process.env.NODE_ENV !== 'production'
+  },
+
+  stealth: {
+    hideFromDock: true,
+    noAttachConsole: true,
+    disguiseProcess: true
   }
+};
 
-  loadConfiguration() {
-    this.config = {
-      app: {
-        name: 'OpenCluely',
-        version: '1.0.0',
-        processTitle: 'OpenCluely',
-        dataDir: this.appDataDir,
-        isDevelopment: this.env === 'development',
-        isProduction: this.env === 'production'
-      },
-      
-      window: {
-        defaultWidth: 400,
-        defaultHeight: 600,
-        minWidth: 300,
-        minHeight: 400,
-        webPreferences: {
-          nodeIntegration: false,
-          contextIsolation: true,
-          enableRemoteModule: false,
-          preload: path.join(__dirname, '../../preload.js')
-        }
-      },
-
-      ocr: {
-        language: 'eng',
-        tempDir: os.tmpdir(),
-        cleanupDelay: 5000
-      },
-
-      llm: {
-        gemini: {
-          model: 'gemini-2.0-flash',
-          maxRetries: 3,
-          timeout: 60000,
-          fallbackEnabled: true,
-          enableFallbackMethod: true,
-          generation: {
-            temperature: 0.7,
-            topK: 32,
-            topP: 0.9,
-            maxOutputTokens: 4096
-          }
-        }
-      },
-
-      speech: {
-        provider: 'azure',
-        azure: {
-          language: 'en-US',
-          enableDictation: true,
-          enableAudioLogging: false,
-          outputFormat: 'detailed'
-        },
-        whisper: {
-          model: 'tiny',
-          language: 'en',
-          segmentMs: 2000
-        }
-      },
-
-      session: {
-        maxMemorySize: 1000,
-        compressionThreshold: 500,
-        clearOnRestart: false
-      },
-
-      stealth: {
-        hideFromDock: true,
-        noAttachConsole: true,
-        disguiseProcess: true
-      }
-    };
+// Resolve nested dot-paths against defaults
+function get(pathKey, defaultValue) {
+  if (!pathKey || typeof pathKey !== 'string') return defaultValue;
+  const parts = pathKey.split('.');
+  let cur = defaults;
+  for (const p of parts) {
+    if (cur && Object.prototype.hasOwnProperty.call(cur, p)) {
+      cur = cur[p];
+    } else {
+      return defaultValue;
+    }
   }
-
-  get(keyPath) {
-    return keyPath.split('.').reduce((obj, key) => obj?.[key], this.config);
-  }
-
-  set(keyPath, value) {
-    const keys = keyPath.split('.');
-    const lastKey = keys.pop();
-    const target = keys.reduce((obj, key) => obj[key] = obj[key] || {}, this.config);
-    target[lastKey] = value;
-  }
-
-  getApiKey(service) {
-    const envKey = `${service.toUpperCase()}_API_KEY`;
-    return process.env[envKey];
-  }
-
-  isFeatureEnabled(feature) {
-    return this.get(`features.${feature}`) !== false;
-  }
+  return cur === undefined ? defaultValue : cur;
 }
 
-module.exports = new ConfigManager();
+// Return the raw environment API key for the given service.
+// Accept any non-empty string; do not enforce prefix/regex rules.
+function getApiKey(serviceName) {
+  if (!serviceName || typeof serviceName !== 'string') return null;
+  const base = String(serviceName).toUpperCase();
+
+  // Common environment variable name patterns to try
+  const candidates = [
+    `${base}_API_KEY`,
+    `${base}_KEY`,
+    `${base}_TOKEN`,
+    `${base}_APIKEY`,
+    `${base}_SECRET`,
+    base,
+    // generic fallbacks that might be present in environments
+    'GEMINI_API_KEY',
+    'API_KEY',
+    'OPENAI_API_KEY'
+  ];
+
+  for (const name of candidates) {
+    const val = process.env[name];
+    if (typeof val === 'string' && val.trim().length > 0) {
+      return val.trim();
+    }
+  }
+
+  return null;
+}
+
+module.exports = {
+  get,
+  getApiKey
+};
