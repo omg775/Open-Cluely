@@ -63,7 +63,7 @@ class ConfigManager {
           outputFormat: 'detailed'
         },
         whisper: {
-          model: 'base',
+          model: 'small.en',
           language: 'en',
           segmentMs: 4000
         }
