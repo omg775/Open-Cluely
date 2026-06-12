@@ -673,37 +673,21 @@ Always respond to the point, do not repeat the question or unnecessary informati
 
 ## Response Rules:
 
-### If the transcription is casual conversation, greetings, or NOT related to ${activeSkill}:
-- Respond with: "Yeah, I'm listening. Ask your question relevant to ${activeSkill}."
-- Or similar brief acknowledgments like: "I'm here, what's your ${activeSkill} question?"
-
-### If the transcription IS relevant to ${activeSkill} or is a follow-up question:
-- Provide a comprehensive, detailed response
-- Use bullet points, examples, and explanations
-- Focus on actionable insights and complete answers
-- Do not truncate or shorten your response
-
-### Examples of casual/irrelevant messages:
-- "Hello", "Hi there", "How are you?"
-- "What's the weather like?"
-- "I'm just testing this"
-- Random conversations not related to ${activeSkill}
-
-### Examples of relevant messages:
-- Actual questions about ${activeSkill} concepts
-- Follow-up questions to previous responses
-- Requests for clarification on ${activeSkill} topics
-- Problem-solving requests related to ${activeSkill}
+- You MUST answer ALL questions asked by the user, including general knowledge questions, general conversation, or off-topic queries.
+- Do NOT reject any topic or question.
+- Provide a comprehensive, detailed response.
+- Use bullet points, examples, and explanations.
+- Focus on actionable insights and complete answers.
+- Do not truncate or shorten your response.
 
 ## Response Format:
 - Keep responses detailed
 - Use bullet points for structured answers
 - Be encouraging and helpful
-- Stay focused on ${activeSkill}
 
 If the user's input is a coding or DSA problem statement and contains no code, produce a complete, runnable solution in the selected programming language without asking for more details. Always include the final implementation in a properly tagged code block.
 
-Remember: Be intelligent about filtering - only provide detailed responses when the user actually needs help with ${activeSkill}.`;
+Remember: Provide detailed and helpful responses for ALL questions, general or skill-related.`;
 
     return prompt;
   }
@@ -995,9 +979,9 @@ Remember: Be intelligent about filtering - only provide detailed responses when 
 
     let response;
     if (hasRelevantKeywords || seemsLikeQuestion) {
-      response = `I'm having trouble processing that right now, but it sounds like a ${activeSkill} question. Could you rephrase or ask more specifically about what you need help with?`;
+      response = `I'm having trouble processing that right now, but I'm here to help. Could you rephrase or ask your question again?`;
     } else {
-      response = `Yeah, I'm listening. Ask your question relevant to ${activeSkill}.`;
+      response = `I'm listening! Feel free to ask any question.`;
     }
     
     return {

@@ -926,6 +926,14 @@ class ApplicationController {
       // Send response to chat windows
       this.broadcastTranscriptionLLMResponse(llmResult);
 
+      // Show the LLM Response window stealthily
+      windowManager.showLLMResponse(llmResult.response, {
+        skill: this.activeSkill,
+        processingTime: llmResult.metadata.processingTime,
+        usedFallback: llmResult.metadata.usedFallback,
+        isTranscriptionResponse: true
+      });
+
       logger.info("Transcription LLM response completed", {
         responseLength: llmResult.response.length,
         skill: this.activeSkill,
@@ -955,6 +963,14 @@ class ApplicationController {
 
         this.broadcastTranscriptionLLMResponse(fallbackResult);
         
+        // Show the fallback response in the LLM window
+        windowManager.showLLMResponse(fallbackResult.response, {
+          skill: this.activeSkill,
+          processingTime: fallbackResult.metadata.processingTime,
+          usedFallback: true,
+          isTranscriptionResponse: true
+        });
+
         logger.info("Used fallback response for transcription", {
           skill: this.activeSkill,
           fallbackResponse: fallbackResult.response
