@@ -419,10 +419,15 @@ class SpeechService extends EventEmitter {
     this.segmentBuffers = [];
     this.segmentBytes = 0;
     this.segmentTimer = null;
+    this.silenceTimer = null;
+    this.lastAudioTime = 0;
     this.transcriptionInFlight = false;
     this.pendingFlush = false;
     this.audioProgram = null;
     this.whisperCommand = null;
+    this._soxProcess = null;
+    this._whisperTempWav = null;
+    this._whisperTempDir = null;
 
     this.initializeClient();
   }
@@ -677,21 +682,76 @@ class SpeechService extends EventEmitter {
     this.segmentBytes = 0;
     this.transcriptionInFlight = false;
     this.pendingFlush = false;
+    this.lastAudioTime = Date.now();
     this.emit('recording-started');
     this.emit('status', 'Local Whisper recording started');
-    this._startMicrophoneCapture();
 
-    const segmentMs = this._getWhisperSegmentMs();
-    this.segmentTimer = setInterval(() => {
-      this._flushWhisperSegment({ final: false }).catch((error) => {
-        logger.error('Whisper segment transcription failed', { error: error.message });
-      });
-    }, segmentMs);
+    // Record directly to WAV file using sox (fixes audio format mismatch)
+    const os = require('os');
+    const pathMod = require('path');
+    this._whisperTempDir = fs.mkdtempSync(pathMod.join(os.tmpdir(), 'opencluely-rec-'));
+    this._whisperTempWav = pathMod.join(this._whisperTempDir, 'recording.wav');
+
+    // sox -d: default mic input, output 16kHz mono 16-bit signed WAV
+    this._soxProcess = spawn('sox', [
+      '-d', '-r', '16000', '-c', '1', '-b', '16', '-e', 'signed-integer',
+      this._whisperTempWav
+    ], { stdio: ['ignore', 'ignore', 'pipe'] });
+
+    this._soxProcess.stderr.on('data', (chunk) => {
+      const line = chunk.toString();
+      if (line.includes('Out:')) {
+        this.lastAudioTime = Date.now();
+        if (this.silenceTimer) clearTimeout(this.silenceTimer);
+        this.silenceTimer = setTimeout(() => {
+          if (this.isRecording) {
+            logger.info('[SPEECH] Silence detected, transcribing...');
+            this._transcribeCurrentRecording().catch((e) =>
+              logger.error('Silence transcription failed', { error: e.message })
+            );
+          }
+        }, 2000);
+      }
+    });
+
+    this._soxProcess.on('error', (err) => {
+      logger.error('[SPEECH] sox error, falling back to node-record', { error: err.message });
+      this._soxProcess = null;
+      this._whisperTempWav = null;
+      this._startMicrophoneCapture();
+    });
+
+    logger.info('[SPEECH] sox recording to WAV started', { file: this._whisperTempWav });
 
     if (global.windowManager) {
       global.windowManager.handleRecordingStarted();
     }
   }
+
+  async _transcribeCurrentRecording() {
+    if (this.transcriptionInFlight) return;
+    if (!this._whisperTempWav) return;
+    const exists = fs.existsSync(this._whisperTempWav);
+    if (!exists) return;
+    const stat = fs.statSync(this._whisperTempWav);
+    if (stat.size < 4000) {
+      logger.info('[SPEECH] WAV too small, skipping', { size: stat.size });
+      return;
+    }
+    this.transcriptionInFlight = true;
+    logger.info('[SPEECH] Running Whisper on WAV', { size: stat.size });
+    try {
+      const transcript = await this._transcribeWhisperFile(this._whisperTempWav);
+      if (transcript && transcript.trim()) {
+        this.emit('transcription', transcript.trim());
+      }
+    } catch (err) {
+      logger.error('[SPEECH] Transcription failed', { error: err.message });
+    } finally {
+      this.transcriptionInFlight = false;
+    }
+  }
+
 
   stopRecording() {
     if (!this.isRecording) {
@@ -736,24 +796,41 @@ class SpeechService extends EventEmitter {
       clearInterval(this.segmentTimer);
       this.segmentTimer = null;
     }
+    if (this.silenceTimer) {
+      clearTimeout(this.silenceTimer);
+      this.silenceTimer = null;
+    }
+
+    // Stop sox recording process
+    if (this._soxProcess) {
+      try { this._soxProcess.kill('SIGTERM'); } catch (_) {}
+      this._soxProcess = null;
+      // Give sox a moment to flush the WAV file
+      await new Promise((r) => setTimeout(r, 500));
+    }
 
     if (this.recording) {
-      try {
-        this.recording.stop();
-      } catch (error) {
-        logger.error('Error stopping audio recording', { error: error.message });
-      }
+      try { this.recording.stop(); } catch (_) {}
       this.recording = null;
     }
 
-    try {
-      await this._flushWhisperSegment({ final: true });
-    } catch (error) {
-      logger.error('Final Whisper transcription failed', { error: error.message });
-      this.emit('error', `Whisper transcription failed: ${error.message}`);
-    } finally {
-      this._finalizeStop('Recording stopped');
+    // Transcribe the final WAV if using sox approach
+    if (this._whisperTempWav) {
+      try {
+        await this._transcribeCurrentRecording();
+      } catch (error) {
+        logger.error('Final Whisper transcription failed', { error: error.message });
+      }
+    } else {
+      // Fallback: flush pcm buffer
+      try {
+        await this._flushWhisperSegment({ final: true });
+      } catch (error) {
+        logger.error('Final Whisper flush failed', { error: error.message });
+      }
     }
+
+    this._finalizeStop('Recording stopped');
   }
 
   _finalizeStop(statusMessage) {
@@ -769,6 +846,19 @@ class SpeechService extends EventEmitter {
     if (this.segmentTimer) {
       clearInterval(this.segmentTimer);
       this.segmentTimer = null;
+    }
+    if (this.silenceTimer) {
+      clearTimeout(this.silenceTimer);
+      this.silenceTimer = null;
+    }
+    if (this._soxProcess) {
+      try { this._soxProcess.kill('SIGTERM'); } catch (_) {}
+      this._soxProcess = null;
+    }
+    if (this._whisperTempDir) {
+      try { fs.rmSync(this._whisperTempDir, { recursive: true, force: true }); } catch (_) {}
+      this._whisperTempDir = null;
+      this._whisperTempWav = null;
     }
 
     if (this.recognizer) {
@@ -1123,6 +1213,20 @@ class SpeechService extends EventEmitter {
     if (this.provider === 'whisper') {
       this.segmentBuffers.push(Buffer.from(chunk));
       this.segmentBytes += chunk.length;
+      this.lastAudioTime = Date.now();
+
+      // Reset the silence timer — flush 1.5s after the last audio chunk arrives
+      if (this.silenceTimer) {
+        clearTimeout(this.silenceTimer);
+      }
+      this.silenceTimer = setTimeout(() => {
+        if (this.isRecording && this.segmentBytes > 0) {
+          logger.info('[SPEECH] Silence detected, flushing Whisper segment');
+          this._flushWhisperSegment({ final: false }).catch((error) => {
+            logger.error('Whisper silence-flush failed', { error: error.message });
+          });
+        }
+      }, 1500);
     }
   }
 

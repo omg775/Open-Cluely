@@ -40,7 +40,7 @@ class ConfigManager {
 
       llm: {
         gemini: {
-          model: 'gemini-3.5-flash',
+          model: 'gemini-2.0-flash',
           maxRetries: 3,
           timeout: 60000,
           fallbackEnabled: true,
@@ -63,9 +63,9 @@ class ConfigManager {
           outputFormat: 'detailed'
         },
         whisper: {
-          model: 'small.en',
+          model: 'tiny',
           language: 'en',
-          segmentMs: 4000
+          segmentMs: 2000
         }
       },
 
