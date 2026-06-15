@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧠 OpenCluely
+# OpenCluely
 
 <p align="center">
   <img src="https://img.shields.io/badge/Status-Under%20Active%20Development-FFA500?style=for-the-badge&logo=github&logoColor=white" />
@@ -32,7 +32,7 @@ https://github.com/user-attachments/assets/896a7140-1e85-405d-bfbe-e05c9f3a816b
 
 ---
 
-## 📌 Overview
+##  Overview
 
 OpenCluely is a cross-platform desktop application built with Electron that combines:
 
@@ -46,22 +46,22 @@ The project explores how AI can be integrated into desktop workflows using light
 
 ---
 
-## ✨ Features
+##  Features
 
-### 🖥️ Desktop Interface
+###  Desktop Interface
 - Floating overlay command bar
 - Draggable UI windows
 - Always-on-top response panels
 - Global keyboard shortcuts
 - Multi-monitor support
 
-### 🤖 AI Capabilities
+###  AI Capabilities
 - Screenshot-based analysis using Gemini
 - Context-aware conversation memory
 - Markdown + code formatting support
 - Language-aware responses (DSA / programming)
 
-### 🎤 Speech Input (Optional)
+###  Speech Input (Optional)
 - Azure Speech integration
 - Local Whisper support
 - Real-time transcription mode
@@ -69,7 +69,7 @@ The project explores how AI can be integrated into desktop workflows using light
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```text
 Input Layer
