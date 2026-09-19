@@ -208,9 +208,8 @@ class ApplicationController {
     });
 
     speechService.on("transcription", (text) => {
-      // Add transcription to session memory
-      sessionManager.addUserInput(text, 'speech');
-
+      // Session memory is written once the debounce window closes, so the
+      // combined utterance is stored as a single turn rather than per chunk.
       const windows = BrowserWindow.getAllWindows();
 
       windows.forEach((window) => {
@@ -372,6 +371,7 @@ class ApplicationController {
     });
 
     ipcMain.handle("clear-session-memory", () => {
+      this.discardPendingTranscript();
       sessionManager.clear();
       windowManager.broadcastToAllWindows("session-cleared");
       return { success: true };
@@ -629,6 +629,7 @@ class ApplicationController {
 
   clearSessionMemory() {
     try {
+      this.discardPendingTranscript();
       sessionManager.clear();
       windowManager.broadcastToAllWindows("session-cleared");
       logger.info("Session memory cleared via global shortcut");
@@ -892,6 +893,15 @@ class ApplicationController {
     }, debounceMs);
   }
 
+  discardPendingTranscript() {
+    if (this.transcriptDebounceTimer) {
+      clearTimeout(this.transcriptDebounceTimer);
+      this.transcriptDebounceTimer = null;
+    }
+    this.pendingTranscript = null;
+    llmService.abortActiveRequest();
+  }
+
   async processTranscriptionWithLLM(text, sessionHistory) {
     const cleanText = typeof text === 'string' ? text.trim() : '';
     if (cleanText.length < 2) {
@@ -911,6 +921,7 @@ class ApplicationController {
         { onDelta: this.createStreamHandler(responseMetadata) }
       );
 
+      sessionManager.addUserInput(cleanText, 'speech');
       sessionManager.addModelResponse(llmResult.response, {
         skill: this.activeSkill,
         processingTime: llmResult.metadata.processingTime,
@@ -926,6 +937,7 @@ class ApplicationController {
         isTranscriptionResponse: true
       });
     } catch (error) {
+      sessionManager.addUserInput(cleanText, 'speech');
       this.reportLLMFailure(error, 'Live transcript response');
     }
   }
@@ -1106,10 +1118,11 @@ class ApplicationController {
       // Persist settings to file or config
       this.persistSettings(settings);
 
-      // If user supplied an Anthropic key via settings UI, apply it immediately
-      if (settings.anthropicKey) {
+      // Apply an Anthropic key supplied via the settings UI immediately; an
+      // explicitly emptied field clears the override and falls back to .env.
+      if (typeof settings.anthropicKey === 'string') {
         try {
-          llmService.updateApiKey(settings.anthropicKey);
+          llmService.updateApiKey(settings.anthropicKey || null);
         } catch (e) {
           logger.error('Failed to apply Anthropic API key from settings', { error: e.message });
         }
@@ -1147,6 +1160,7 @@ class ApplicationController {
       }
 
       const merged = Object.assign({}, existing, settings);
+      if (settings.anthropicKey === '') delete merged.anthropicKey;
 
       // Ensure directory exists
       try {

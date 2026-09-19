@@ -16,6 +16,8 @@ class LLMService {
     this.apiKey = null; // in-memory override for configured API key
     this.lastRequestStartedAt = 0;
     this.activeStream = null;
+    this.activeController = null;
+    this.latestRequestId = 0;
 
     this.initializeClient();
   }
@@ -298,11 +300,20 @@ You are assisting someone during a live call, meeting, or research session. You 
    * Resolves with { response, metadata }.
    */
   async send(request, { activeSkill, programmingLanguage, metadata = {}, onDelta = null, signal = null } = {}) {
-    await this.respectRateLimit();
+    // A newer request always supersedes whatever is still in flight, streaming
+    // or not, so a slow earlier answer cannot land on top of a newer one.
+    this.abortActiveRequest();
 
     const startTime = Date.now();
     this.requestCount++;
     const requestId = this.requestCount;
+    this.latestRequestId = requestId;
+
+    const controller = new AbortController();
+    this.activeController = controller;
+    if (signal) signal.addEventListener('abort', () => controller.abort(), { once: true });
+
+    await this.respectRateLimit();
 
     const payload = {
       model: this.getModel(),
@@ -316,8 +327,14 @@ You are assisting someone during a live call, meeting, or research session. You 
 
     try {
       const text = shouldStream
-        ? await this.executeStreaming(payload, onDelta, signal)
-        : await this.executeOnce(payload, signal);
+        ? await this.executeStreaming(payload, onDelta, controller.signal)
+        : await this.executeOnce(payload, controller.signal);
+
+      if (this.latestRequestId !== requestId) {
+        const superseded = new Error('Request cancelled.');
+        superseded.name = 'AbortError';
+        throw superseded;
+      }
 
       const response = programmingLanguage ? this.enforceProgrammingLanguage(text, programmingLanguage) : text;
       if (!response || !response.trim()) throw new Error('Claude returned an empty response');
@@ -353,6 +370,8 @@ You are assisting someone during a live call, meeting, or research session. You 
       wrapped.errorAnalysis = analysis;
       wrapped.originalError = error;
       throw wrapped;
+    } finally {
+      if (this.activeController === controller) this.activeController = null;
     }
   }
 
@@ -366,8 +385,6 @@ You are assisting someone during a live call, meeting, or research session. You 
    * 'text' events; each chunk is forwarded to onDelta as it arrives.
    */
   async executeStreaming(payload, onDelta, signal) {
-    this.abortActiveRequest();
-
     const stream = this.client.messages.stream(payload, signal ? { signal } : undefined);
     this.activeStream = stream;
 
@@ -397,14 +414,24 @@ You are assisting someone during a live call, meeting, or research session. You 
   }
 
   abortActiveRequest() {
-    if (!this.activeStream) return;
-    try {
-      this.activeStream.abort();
-      logger.debug('Aborted in-flight Claude stream');
-    } catch (error) {
-      logger.warn('Failed to abort active stream', { error: error.message });
+    if (this.activeStream) {
+      try {
+        this.activeStream.abort();
+        logger.debug('Aborted in-flight Claude stream');
+      } catch (error) {
+        logger.warn('Failed to abort active stream', { error: error.message });
+      }
+      this.activeStream = null;
     }
-    this.activeStream = null;
+
+    if (this.activeController) {
+      try {
+        this.activeController.abort();
+      } catch (error) {
+        logger.warn('Failed to abort active request', { error: error.message });
+      }
+      this.activeController = null;
+    }
   }
 
   /**

@@ -405,6 +405,7 @@
             display: flex;
             align-items: flex-start;
             gap: 8px;
+            margin-top: 32px;
             padding: 10px 14px;
             font-size: 12px;
             line-height: 1.45;
@@ -721,14 +722,37 @@
 
         function renderMarkdown(text) {
             if (typeof marked !== 'undefined') {
-                return marked.parse ? marked.parse(text) : marked(text);
+                return sanitizeHtml(marked.parse ? marked.parse(text) : marked(text));
             }
 
             if (typeof markdown !== 'undefined' && typeof markdown.toHTML === 'function') {
-                return markdown.toHTML(text);
+                return sanitizeHtml(markdown.toHTML(text));
             }
 
             return escapeHtml(text).replace(/\n/g, '<br>');
+        }
+
+        const UNSAFE_TAGS = ['script', 'iframe', 'object', 'embed', 'link', 'meta', 'style', 'base', 'form'];
+
+        // Model output is untrusted: drop active markup before it reaches the DOM.
+        function sanitizeHtml(html) {
+            const doc = new DOMParser().parseFromString(String(html), 'text/html');
+
+            doc.body.querySelectorAll(UNSAFE_TAGS.join(',')).forEach(node => node.remove());
+
+            doc.body.querySelectorAll('*').forEach(node => {
+                Array.from(node.attributes).forEach(attr => {
+                    const name = attr.name.toLowerCase();
+                    const value = attr.value.replace(/\s+/g, '').toLowerCase();
+                    const isUrl = name === 'href' || name === 'src' || name === 'xlink:href';
+
+                    if (name.startsWith('on') || (isUrl && (value.startsWith('javascript:') || value.startsWith('data:text/html')))) {
+                        node.removeAttribute(attr.name);
+                    }
+                });
+            });
+
+            return doc.body.innerHTML;
         }
 
         function calculateContentMetrics(response, codeBlocks) {
