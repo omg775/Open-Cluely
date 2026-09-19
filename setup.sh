@@ -147,21 +147,19 @@ ensure_anthropic_key() {
     upsert_env "ANTHROPIC_API_KEY" "$ANTHROPIC_API_KEY"
   fi
 
-  if ! grep -q '^ANTHROPIC_API_KEY=' .env 2>/dev/null || grep -q 'your-anthropic-api-key-here' .env 2>/dev/null; then
-    echo ""
-    echo "=========================================="
-    echo " ANTHROPIC API KEY REQUIRED"
-    echo "=========================================="
-    echo ""
-    echo "Add your Anthropic API key to .env (ANTHROPIC_API_KEY=sk-ant-...)."
-    echo "Create one at: https://console.anthropic.com/settings/keys"
-    echo ""
-    read -r -p "Press Enter after you've updated .env..."
+  # A key is optional: a linked app gets Claude through the dashboard, which
+  # holds the key server-side. The placeholder is cleared so it never reaches
+  # the SDK as a real value.
+  if grep -q 'your-anthropic-api-key-here' .env 2>/dev/null; then
+    upsert_env "ANTHROPIC_API_KEY" ""
   fi
 
-  if grep -q 'your-anthropic-api-key-here' .env 2>/dev/null; then
-    echo "Error: ANTHROPIC_API_KEY is still not configured in .env"
-    exit 1
+  if ! grep -q '^ANTHROPIC_API_KEY=sk-' .env 2>/dev/null; then
+    echo ""
+    echo "No local ANTHROPIC_API_KEY set — that is fine."
+    echo "Link the app from the dashboard (Launch assistant) and it will use the"
+    echo "hosted key. To run it standalone instead, set ANTHROPIC_API_KEY in .env."
+    echo ""
   fi
 }
 
