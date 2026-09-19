@@ -1071,6 +1071,9 @@ class ApplicationController {
       }
 
       return {
+        // Speech fields show what the service will actually use, so .env values
+        // are visible in the UI instead of empty placeholders.
+        ...speechService.getStatus().effectiveSettings,
         codingLanguage: this.codingLanguage || persisted.codingLanguage || "cpp",
         activeSkill: this.activeSkill || persisted.activeSkill || "dsa",
         appIcon: this.appIcon || persisted.appIcon || "terminal",
@@ -1127,6 +1130,8 @@ class ApplicationController {
       // Persist settings to file or config
       this.persistSettings(settings);
 
+      this.applySpeechSettings(settings);
+
       // Apply an Anthropic key supplied via the settings UI immediately; an
       // explicitly emptied field clears the override and falls back to .env.
       if (typeof settings.anthropicKey === 'string') {
@@ -1144,6 +1149,19 @@ class ApplicationController {
     } catch (error) {
       logger.error("Failed to save settings", { error: error.message });
       return { success: false, error: error.message };
+    }
+  }
+
+  applySpeechSettings(settings) {
+    try {
+      const status = speechService.updateSettings(settings);
+      this.speechAvailable = speechService.isAvailable();
+      windowManager.broadcastToAllWindows("speech-status", {
+        status: `Speech provider: ${status.provider}`,
+        available: this.speechAvailable
+      });
+    } catch (error) {
+      logger.error("Failed to apply speech settings", { error: error.message });
     }
   }
 
@@ -1205,6 +1223,8 @@ class ApplicationController {
       if (persisted.codingLanguage) this.codingLanguage = persisted.codingLanguage;
       if (persisted.activeSkill) this.activeSkill = persisted.activeSkill;
       if (persisted.appIcon) this.appIcon = persisted.appIcon;
+
+      speechService.updateSettings(persisted);
 
       // An env-provided key always wins over a stored one
       if (persisted.anthropicKey && !config.getApiKey('ANTHROPIC')) {

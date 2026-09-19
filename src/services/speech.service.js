@@ -1094,6 +1094,13 @@ class SpeechService extends EventEmitter {
     }
 
     if (changed) {
+      // Capture is already running against the previous device/source, so it has
+      // to be torn down before the new settings can take effect.
+      if (this.isRecording) {
+        this.stopRecording();
+        this.emit('status', 'Speech capture stopped — press Alt+R again to apply the new settings');
+      }
+
       this.initializeClient();
     }
 

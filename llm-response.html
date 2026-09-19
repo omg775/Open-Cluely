@@ -502,7 +502,7 @@
         let initialized = false;
         let activeStreamId = null;
         let streamBuffer = '';
-        let streamRenderQueued = false;
+        let streamRenderHandle = null;
         
         // Immediate logging to verify script execution
         console.log('[LLM-RESPONSE] Script tag executed');
@@ -630,6 +630,12 @@
          * and the final display-llm-response re-renders with the split layout.
          */
         function beginStream(streamId) {
+            if (streamRenderHandle !== null) {
+                cancelAnimationFrame(streamRenderHandle);
+                streamRenderHandle = null;
+            }
+
+            streamBuffer = '';
             activeStreamId = streamId ?? null;
             hideErrorState();
             hideLoadingState();
@@ -654,11 +660,10 @@
             if (typeof content !== 'string') return;
 
             streamBuffer = content;
-            if (streamRenderQueued) return;
+            if (streamRenderHandle !== null) return;
 
-            streamRenderQueued = true;
-            requestAnimationFrame(() => {
-                streamRenderQueued = false;
+            streamRenderHandle = requestAnimationFrame(() => {
+                streamRenderHandle = null;
                 const fullMarkdown = document.getElementById('full-markdown');
                 if (!fullMarkdown) return;
 
@@ -669,6 +674,13 @@
         }
 
         function endStream() {
+            // A frame queued by the last delta would otherwise repaint the panel
+            // with the cleared buffer after the final response is rendered.
+            if (streamRenderHandle !== null) {
+                cancelAnimationFrame(streamRenderHandle);
+                streamRenderHandle = null;
+            }
+
             activeStreamId = null;
             streamBuffer = '';
             const fullMarkdown = document.getElementById('full-markdown');
