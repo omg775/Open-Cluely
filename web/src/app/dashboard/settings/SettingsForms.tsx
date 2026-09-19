@@ -70,8 +70,6 @@ export function ModelForm({
   models: readonly { id: string; label: string }[];
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(updateModel, INITIAL);
-  // React resets uncontrolled fields when the action returns, which would show
-  // the pre-submit model until the revalidated prop arrives.
   const [selected, setSelected] = useState(model);
   const [savedModel, setSavedModel] = useState(model);
   if (model !== savedModel) {
@@ -79,13 +77,15 @@ export function ModelForm({
     setSelected(model);
   }
 
+  // The select sits outside the form: submitting resets the form's own fields,
+  // and a reset select falls back to the option React marked at mount rather
+  // than the one just chosen. The hidden input carries the choice instead.
   return (
-    <form action={formAction} className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3">
       <label className="flex flex-col gap-2 text-sm">
         Model
         <select
           className="input"
-          name="model"
           value={selected}
           onChange={event => setSelected(event.target.value)}
         >
@@ -96,11 +96,14 @@ export function ModelForm({
           ))}
         </select>
       </label>
-      <Status state={state} />
-      <button type="submit" className="btn btn-primary self-start" disabled={pending}>
-        {pending ? "Saving…" : "Save model"}
-      </button>
-    </form>
+      <form action={formAction} className="flex flex-col gap-3">
+        <input type="hidden" name="model" value={selected} readOnly />
+        <Status state={state} />
+        <button type="submit" className="btn btn-primary self-start" disabled={pending}>
+          {pending ? "Saving…" : "Save model"}
+        </button>
+      </form>
+    </div>
   );
 }
 
