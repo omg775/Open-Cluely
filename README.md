@@ -117,6 +117,8 @@ The dashboard stores an Anthropic key (encrypted at rest with AES-256-GCM), a mo
 
 **Linking the desktop app.** Dashboard → Launch mints a single-use token valid for two minutes and opens `opencluely://auth?token=…&api=…`. The desktop app registers that protocol, exchanges the token for a long-lived device token at `POST /api/device/exchange`, stores it in the Electron user-data directory with `0600` permissions, and then applies the account's key, model, and documents. `GET /api/device/config` refreshes them on later launches; revoking the device in the dashboard makes the next refresh fail and unlinks the desktop app. If the protocol is not registered (for example when running from source on Linux), the Launch page also shows the local-run instructions.
 
+Launch links are attacker-reachable, so the desktop app only accepts an `api=` origin that is `https` (or loopback for local development). Set `OPENCLUELY_API_URL` in the desktop app's `.env` to pin it to a single dashboard origin.
+
 ---
 
 ## Shortcuts

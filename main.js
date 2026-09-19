@@ -25,6 +25,7 @@ const sessionManager = require("./src/managers/session.manager");
 class ApplicationController {
   constructor() {
     this.isReady = false;
+    this.sessionFlushed = false;
     this.activeSkill = "dsa";
     // Default to C++ so language is enforced from first run
     this.codingLanguage = "cpp";
@@ -79,6 +80,18 @@ class ApplicationController {
     app.on("open-url", (event, url) => {
       event.preventDefault();
       this.handleDeepLink(url);
+    });
+
+    // Reporting the session end is a network round trip, so quitting is held
+    // back until it has been flushed.
+    app.on("before-quit", event => {
+      if (this.sessionFlushed || !accountService.hasUnreportedSession()) return;
+
+      event.preventDefault();
+      accountService.endSession().finally(() => {
+        this.sessionFlushed = true;
+        app.quit();
+      });
     });
 
     app.whenReady().then(() => this.onAppReady());
@@ -238,16 +251,18 @@ class ApplicationController {
     }
   }
 
+  /**
+   * Dashboard settings are authoritative: a key the account no longer has is
+   * cleared locally rather than left behind.
+   */
   applyAccountPayload({ settings = {}, documents = [] } = {}) {
-    if (typeof settings.anthropicKey === "string" && settings.anthropicKey.trim()) {
-      llmService.updateApiKey(settings.anthropicKey);
-      this.persistSettings({ anthropicKey: settings.anthropicKey });
+    if ("anthropicKey" in settings) {
+      const key = typeof settings.anthropicKey === "string" ? settings.anthropicKey.trim() : "";
+      llmService.updateApiKey(key || null);
+      this.persistSettings({ anthropicKey: key });
     }
 
-    if (typeof settings.model === "string" && settings.model.trim()) {
-      llmService.setModel(settings.model);
-    }
-
+    llmService.setModel(typeof settings.model === "string" ? settings.model : null);
     llmService.setGroundingDocuments(documents);
   }
 
@@ -345,6 +360,9 @@ class ApplicationController {
     ipcMain.handle("unlink-account", () => {
       accountService.unlink();
       llmService.setGroundingDocuments([]);
+      llmService.setModel(null);
+      llmService.updateApiKey(null);
+      this.persistSettings({ anthropicKey: "" });
       this.broadcastAccountStatus("Unlinked from the dashboard account");
       return accountService.getStatus();
     });
@@ -1119,7 +1137,6 @@ class ApplicationController {
 
   onWillQuit() {
     globalShortcut.unregisterAll();
-    accountService.endSession();
 
     if (this.transcriptDebounceTimer) {
       clearTimeout(this.transcriptDebounceTimer);

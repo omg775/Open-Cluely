@@ -33,7 +33,17 @@ export async function signup(_state: AuthState, formData: FormData): Promise<Aut
     return { error: "An account with that email already exists." };
   }
 
-  const user = await createUser(credentials.email, await bcrypt.hash(credentials.password, 10));
+  let user;
+  try {
+    user = await createUser(credentials.email, await bcrypt.hash(credentials.password, 10));
+  } catch (error) {
+    // 23505: a concurrent signup won the race on the unique email index.
+    if ((error as { code?: string }).code === "23505") {
+      return { error: "An account with that email already exists." };
+    }
+    throw error;
+  }
+
   await createSession({ userId: user.id, email: user.email });
   redirect("/dashboard");
 }

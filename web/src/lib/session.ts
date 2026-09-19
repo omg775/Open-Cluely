@@ -15,6 +15,10 @@ function encodedKey(): Uint8Array {
   if (!value) {
     throw new Error("SESSION_SECRET is not set");
   }
+  // HS256 keys shorter than the digest are guessable offline.
+  if (value.length < 32) {
+    throw new Error("SESSION_SECRET must be at least 32 characters (try `openssl rand -base64 32`)");
+  }
   return new TextEncoder().encode(value);
 }
 

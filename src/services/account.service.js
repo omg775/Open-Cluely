@@ -28,6 +28,35 @@ class AccountService extends EventEmitter {
     this.sessionStartedAt = 0;
     this.utteranceCount = 0;
     this.answerCount = 0;
+    this.startPromise = null;
+    this.pendingCompletion = null;
+  }
+
+  /**
+   * Deep links are attacker-reachable, so the dashboard origin they carry is
+   * only accepted over TLS (or on loopback for local development), and can be
+   * pinned outright with OPENCLUELY_API_URL.
+   */
+  static normalizeApiBaseUrl(value) {
+    let url;
+
+    try {
+      url = new URL(value);
+    } catch (error) {
+      throw new Error('Launch link has an invalid dashboard URL');
+    }
+
+    const loopback = ['localhost', '127.0.0.1', '[::1]', '::1'].includes(url.hostname);
+    if (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback)) {
+      throw new Error('Launch links must point at an https dashboard');
+    }
+
+    const pinned = (process.env.OPENCLUELY_API_URL || '').trim();
+    if (pinned && new URL(pinned).origin !== url.origin) {
+      throw new Error(`Launch link points at ${url.origin}, which is not the configured dashboard`);
+    }
+
+    return url.origin;
   }
 
   statePath() {
@@ -132,10 +161,12 @@ class AccountService extends EventEmitter {
     }
 
     const token = url.searchParams.get('token');
-    const apiBaseUrl = url.searchParams.get('api') || this.apiBaseUrl;
+    const requestedBaseUrl = url.searchParams.get('api') || this.apiBaseUrl;
 
     if (!token) throw new Error('Launch link is missing its token');
-    if (!apiBaseUrl) throw new Error('Launch link is missing the dashboard URL');
+    if (!requestedBaseUrl) throw new Error('Launch link is missing the dashboard URL');
+
+    const apiBaseUrl = AccountService.normalizeApiBaseUrl(requestedBaseUrl);
 
     const payload = await this.request(apiBaseUrl, '/api/device/exchange', {
       method: 'POST',
@@ -143,7 +174,7 @@ class AccountService extends EventEmitter {
     });
 
     this.deviceToken = payload.deviceToken;
-    this.apiBaseUrl = apiBaseUrl.replace(/\/$/, '');
+    this.apiBaseUrl = apiBaseUrl;
     this.email = payload.email || this.email;
     this.save();
 
@@ -176,53 +207,86 @@ class AccountService extends EventEmitter {
   // ---------------------------------------------------------------------------
 
   async startSession(model) {
-    if (!this.isLinked() || this.remoteSessionId) return null;
+    if (!this.isLinked() || this.remoteSessionId || this.startPromise) return null;
 
     this.sessionStartedAt = Date.now();
     this.utteranceCount = 0;
     this.answerCount = 0;
 
-    try {
-      const payload = await this.request(this.apiBaseUrl, '/api/device/sessions', {
-        method: 'POST',
-        body: { model: model || null }
+    this.startPromise = this.request(this.apiBaseUrl, '/api/device/sessions', {
+      method: 'POST',
+      body: { model: model || null }
+    })
+      .then(payload => {
+        this.remoteSessionId = payload.sessionId || null;
+        return this.remoteSessionId;
+      })
+      .catch(error => {
+        logger.warn('Could not report session start', { error: error.message });
+        return null;
+      })
+      .finally(() => {
+        this.startPromise = null;
       });
-      this.remoteSessionId = payload.sessionId || null;
-      return this.remoteSessionId;
-    } catch (error) {
-      logger.warn('Could not report session start', { error: error.message });
-      return null;
-    }
+
+    return this.startPromise;
   }
 
   recordUtterance() {
-    if (this.remoteSessionId) this.utteranceCount++;
+    if (this.remoteSessionId || this.startPromise) this.utteranceCount++;
   }
 
   recordAnswer() {
-    if (this.remoteSessionId) this.answerCount++;
+    if (this.remoteSessionId || this.startPromise) this.answerCount++;
   }
 
+  /**
+   * Closes the remote session. A stop that arrives while the session is still
+   * being created waits for the id, so a short recording cannot leak its
+   * metadata into the next one.
+   */
   async endSession() {
+    if (this.startPromise) await this.startPromise;
     if (!this.remoteSessionId) return;
 
-    const sessionId = this.remoteSessionId;
+    this.pendingCompletion = {
+      sessionId: this.remoteSessionId,
+      durationSeconds: Math.round((Date.now() - this.sessionStartedAt) / 1000),
+      utteranceCount: this.utteranceCount,
+      answerCount: this.answerCount,
+      ended: true
+    };
     this.remoteSessionId = null;
 
-    try {
-      await this.request(this.apiBaseUrl, '/api/device/sessions', {
-        method: 'PATCH',
-        body: {
-          sessionId,
-          durationSeconds: Math.round((Date.now() - this.sessionStartedAt) / 1000),
-          utteranceCount: this.utteranceCount,
-          answerCount: this.answerCount,
-          ended: true
+    await this.flushPendingCompletion();
+  }
+
+  /**
+   * Retries the completion so a transient dashboard failure does not leave the
+   * session row stuck at zero duration.
+   */
+  async flushPendingCompletion(attempts = 3) {
+    for (let attempt = 0; attempt < attempts && this.pendingCompletion; attempt++) {
+      try {
+        await this.request(this.apiBaseUrl, '/api/device/sessions', {
+          method: 'PATCH',
+          body: this.pendingCompletion
+        });
+        this.pendingCompletion = null;
+        return true;
+      } catch (error) {
+        logger.warn('Could not report session end', { error: error.message, attempt: attempt + 1 });
+        if (attempt < attempts - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
         }
-      });
-    } catch (error) {
-      logger.warn('Could not report session end', { error: error.message });
+      }
     }
+
+    return !this.pendingCompletion;
+  }
+
+  hasUnreportedSession() {
+    return !!(this.remoteSessionId || this.startPromise || this.pendingCompletion);
   }
 
   async request(baseUrl, route, { method = 'GET', body = null } = {}) {
@@ -267,3 +331,4 @@ class AccountService extends EventEmitter {
 module.exports = new AccountService();
 module.exports.PROTOCOL = PROTOCOL;
 module.exports.findDeepLink = AccountService.findDeepLink;
+module.exports.normalizeApiBaseUrl = AccountService.normalizeApiBaseUrl;

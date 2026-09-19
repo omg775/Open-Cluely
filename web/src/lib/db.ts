@@ -14,12 +14,14 @@ function createPool(): Pool {
     throw new Error("DATABASE_URL is not set");
   }
 
+  const isLocal = connectionString.includes("localhost") || connectionString.includes("127.0.0.1");
+
   return new Pool({
     connectionString,
     max: 3,
-    ssl: connectionString.includes("localhost") || connectionString.includes("127.0.0.1")
-      ? undefined
-      : { rejectUnauthorized: false },
+    // Managed providers (Neon, Supabase, RDS) present publicly trusted
+    // certificates, so remote connections verify them.
+    ssl: isLocal ? undefined : { rejectUnauthorized: true },
   });
 }
 
