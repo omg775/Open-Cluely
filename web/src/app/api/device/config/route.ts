@@ -12,7 +12,7 @@ export async function GET(request: Request): Promise<Response> {
 
   return Response.json({
     email: device.email,
-    settings: { anthropicKey: settings.anthropicKey, model: settings.model },
+    settings: { model: settings.model },
     documents,
   });
 }

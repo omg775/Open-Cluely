@@ -36,7 +36,7 @@ export async function POST(request: Request): Promise<Response> {
   return Response.json({
     deviceToken,
     email: account.email,
-    settings: { anthropicKey: settings.anthropicKey, model: settings.model },
+    settings: { model: settings.model },
     documents,
   });
 }

@@ -8,11 +8,11 @@ const FEATURES = [
   },
   {
     title: "Nothing is stored",
-    body: "Transcripts and screenshots never leave your machine except as a single Claude request. We keep session metadata — time and duration — and no content.",
+    body: "Screen frames and speech stay in your tab except for the single Claude request that answers each question. We keep session metadata — time and duration — and no content.",
   },
   {
     title: "Answers stream as they are written",
-    body: "Claude tokens render in the overlay the moment they arrive, so you read the first line while the rest is still being generated.",
+    body: "Claude tokens render the moment they arrive, so you read the first line while the rest is still being generated.",
   },
   {
     title: "Confidence you can see",
@@ -22,8 +22,8 @@ const FEATURES = [
 
 const STEPS = [
   { step: "1", title: "Create an account", body: "Email and password. Takes a few seconds." },
-  { step: "2", title: "Set your key and model", body: "Bring your own Anthropic key, pick Sonnet for speed or Opus for depth." },
-  { step: "3", title: "Launch the assistant", body: "One click hands your settings to the desktop app and it starts listening." },
+  { step: "2", title: "Pick your model", body: "Sonnet for speed or Opus for depth. There is no API key to bring — Claude runs on our side." },
+  { step: "3", title: "Launch the assistant", body: "It opens in the same tab. Grant screen and microphone permission and it starts listening." },
 ];
 
 export default async function LandingPage() {
@@ -70,8 +70,8 @@ export default async function LandingPage() {
             Answers from your own knowledge, while the conversation is still happening.
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-[var(--muted)]">
-            OpenCluely listens to your meeting or study session, reads what is on your screen, and
-            surfaces grounded answers in a small overlay — without storing a word of what was said.
+            OpenCluely listens to your meeting or study session, reads the screen you share, and
+            streams grounded answers back — without storing a word of what was said.
           </p>
           <div className="mt-10 flex flex-wrap gap-3">
             <Link href={session ? "/dashboard" : "/signup"} className="btn btn-primary px-6 py-3">
@@ -82,7 +82,7 @@ export default async function LandingPage() {
             </Link>
           </div>
           <p className="mt-4 text-xs text-[var(--muted)]">
-            Bring your own Anthropic key. Runs locally on macOS, Windows and Linux.
+            Runs in your browser. No download, no API key, no setup.
           </p>
         </section>
 
@@ -112,7 +112,7 @@ export default async function LandingPage() {
             <div>
               <h3 className="text-lg font-medium">Ready to try it in your next call?</h3>
               <p className="mt-1 text-sm text-[var(--muted)]">
-                Set up takes about two minutes, including the desktop app.
+                Sign up and launch it in the same tab — about thirty seconds.
               </p>
             </div>
             <Link href={session ? "/dashboard" : "/signup"} className="btn btn-primary px-6 py-3">

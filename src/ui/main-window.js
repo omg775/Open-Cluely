@@ -901,20 +901,11 @@ class MainWindowUI {
                     <p><strong>Model:</strong> ${status.model}</p>
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2">Anthropic API Key:</label>
-                    <input type="password" id="anthropicApiKey" placeholder="sk-ant-..."
-                           class="w-full p-2 bg-gray-800 border border-gray-600 rounded text-white">
-                    <p class="text-xs text-gray-400 mt-1">
-                        Create a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" class="text-blue-400">console.anthropic.com</a>,
-                        or set ANTHROPIC_API_KEY in your .env file.
-                    </p>
-                </div>
+                <p class="text-xs text-gray-400 mb-4">
+                    Set ANTHROPIC_API_KEY in your .env file and restart the app to change it.
+                </p>
 
                 <div class="flex space-x-2">
-                    <button onclick="mainWindowUI.configureLlm()" class="flex-1 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
-                        Configure
-                    </button>
                     <button onclick="mainWindowUI.testLlmConnection()" class="flex-1 bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
                         Test Connection
                     </button>
@@ -928,36 +919,6 @@ class MainWindowUI {
             </div>
         `;
         return modal;
-    }
-
-    async configureLlm() {
-        const apiKey = document.getElementById('anthropicApiKey').value.trim();
-        if (!apiKey) {
-            this.showNotification('Please enter an API key', 'error');
-            return;
-        }
-
-        try {
-            const result = await window.electronAPI.setLlmApiKey(apiKey);
-            if (result.success) {
-                this.showNotification('Anthropic API key configured', 'success');
-                document.querySelector('.fixed').remove();
-
-                logger.info('Anthropic API key configured', { component: 'MainWindowUI' });
-            } else {
-                this.showNotification(`Configuration failed: ${result.error}`, 'error');
-                logger.error('Claude configuration failed', {
-                    component: 'MainWindowUI',
-                    error: result.error
-                });
-            }
-        } catch (error) {
-            this.showNotification(`Error: ${error.message}`, 'error');
-            logger.error('Claude configuration error', {
-                component: 'MainWindowUI',
-                error: error.message
-            });
-        }
     }
 
     async testLlmConnection() {

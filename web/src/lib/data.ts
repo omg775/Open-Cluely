@@ -1,6 +1,6 @@
 import "server-only";
 import { query, queryOne } from "@/lib/db";
-import { decryptSecret, encryptSecret, generateToken, hashToken } from "@/lib/crypto";
+import { generateToken, hashToken } from "@/lib/crypto";
 
 export const MODELS = [
   { id: "claude-sonnet-4-5", label: "Claude Sonnet 4.5 — fastest, default" },
@@ -16,7 +16,6 @@ export type UserRow = {
 };
 
 export type SettingsRow = {
-  anthropic_key_encrypted: string | null;
   model: string;
 };
 
@@ -57,21 +56,17 @@ export async function createUser(email: string, passwordHash: string): Promise<U
   return user;
 }
 
-export async function getSettings(userId: string): Promise<{ anthropicKey: string | null; model: string }> {
-  const row = await queryOne<SettingsRow>(
-    "SELECT anthropic_key_encrypted, model FROM user_settings WHERE user_id = $1",
-    [userId]
-  );
+export async function getSettings(userId: string): Promise<{ model: string }> {
+  const row = await queryOne<SettingsRow>("SELECT model FROM user_settings WHERE user_id = $1", [
+    userId,
+  ]);
 
   if (!row) {
     await query("INSERT INTO user_settings (user_id) VALUES ($1) ON CONFLICT DO NOTHING", [userId]);
-    return { anthropicKey: null, model: "claude-sonnet-4-5" };
+    return { model: "claude-sonnet-4-5" };
   }
 
-  return {
-    anthropicKey: row.anthropic_key_encrypted ? decryptSecret(row.anthropic_key_encrypted) : null,
-    model: row.model,
-  };
+  return { model: row.model };
 }
 
 export async function saveModel(userId: string, model: string): Promise<void> {
@@ -82,13 +77,6 @@ export async function saveModel(userId: string, model: string): Promise<void> {
   );
 }
 
-export async function saveAnthropicKey(userId: string, key: string | null): Promise<void> {
-  await query(
-    `INSERT INTO user_settings (user_id, anthropic_key_encrypted, updated_at) VALUES ($1, $2, now())
-     ON CONFLICT (user_id) DO UPDATE SET anthropic_key_encrypted = EXCLUDED.anthropic_key_encrypted, updated_at = now()`,
-    [userId, key === null ? null : encryptSecret(key)]
-  );
-}
 
 export async function listDocuments(userId: string): Promise<DocumentRow[]> {
   return query<DocumentRow>(
@@ -178,6 +166,18 @@ export async function updateAssistantSession(
       update.ended,
     ]
   );
+}
+
+export async function countRequestsToday(userId: string): Promise<number> {
+  const row = await queryOne<{ count: string }>(
+    "SELECT count(*)::text AS count FROM assistant_requests WHERE user_id = $1 AND created_at > now() - interval '1 day'",
+    [userId]
+  );
+  return Number(row?.count ?? 0);
+}
+
+export async function recordRequest(userId: string): Promise<void> {
+  await query("INSERT INTO assistant_requests (user_id) VALUES ($1)", [userId]);
 }
 
 export async function createLaunchToken(userId: string, ttlSeconds = 120): Promise<string> {

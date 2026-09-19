@@ -20,8 +20,11 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
               <Link href="/dashboard/settings" className="hover:text-[var(--foreground)]">
                 Settings
               </Link>
+              <Link href="/dashboard/assistant" className="hover:text-[var(--foreground)]">
+                Assistant
+              </Link>
               <Link href="/dashboard/launch" className="hover:text-[var(--foreground)]">
-                Launch
+                Desktop app
               </Link>
             </nav>
           </div>

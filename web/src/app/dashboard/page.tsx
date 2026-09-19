@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
-import { getSettings, listSessions, sessionTotals } from "@/lib/data";
+import { listSessions, sessionTotals } from "@/lib/data";
 
 function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
@@ -20,10 +20,9 @@ function formatWhen(date: Date): string {
 
 export default async function DashboardPage() {
   const user = await requireUser();
-  const [sessions, totals, settings] = await Promise.all([
+  const [sessions, totals] = await Promise.all([
     listSessions(user.userId),
     sessionTotals(user.userId),
-    getSettings(user.userId),
   ]);
 
   return (
@@ -35,7 +34,7 @@ export default async function DashboardPage() {
             Session metadata only — no transcripts, screenshots or answers are ever stored.
           </p>
         </div>
-        <Link href="/dashboard/launch" className="btn btn-primary px-5 py-2.5">
+        <Link href="/dashboard/assistant" className="btn btn-primary px-5 py-2.5">
           Launch assistant
         </Link>
       </div>
@@ -55,24 +54,14 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {!settings.anthropicKey ? (
-        <div className="panel border-[var(--accent)] p-5 text-sm">
-          Add your Anthropic API key in{" "}
-          <Link href="/dashboard/settings" className="text-[var(--accent)]">
-            Settings
-          </Link>{" "}
-          so the desktop app can pick it up when you launch it.
-        </div>
-      ) : null}
-
       <section className="panel overflow-hidden">
         <div className="border-b border-[var(--border)] px-5 py-4">
           <h2 className="text-base font-medium">Recent sessions</h2>
         </div>
         {sessions.length === 0 ? (
           <p className="px-5 py-8 text-sm text-[var(--muted)]">
-            No sessions yet. Launch the desktop assistant and it will report its start time and
-            duration here.
+            No sessions yet. Launch the assistant and each run reports its start time and duration
+            here.
           </p>
         ) : (
           <table className="w-full text-left text-sm">

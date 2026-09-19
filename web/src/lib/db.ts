@@ -35,9 +35,17 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS user_settings (
   user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-  anthropic_key_encrypted TEXT,
   model TEXT NOT NULL DEFAULT 'claude-sonnet-4-5',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Keys are server-side only now, so any previously stored user key is dropped.
+ALTER TABLE user_settings DROP COLUMN IF EXISTS anthropic_key_encrypted;
+
+CREATE TABLE IF NOT EXISTS assistant_requests (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS documents (
@@ -78,6 +86,9 @@ CREATE TABLE IF NOT EXISTS launch_tokens (
 
 CREATE INDEX IF NOT EXISTS assistant_sessions_user_started_idx
   ON assistant_sessions (user_id, started_at DESC);
+
+CREATE INDEX IF NOT EXISTS assistant_requests_user_created_idx
+  ON assistant_requests (user_id, created_at DESC);
 `;
 
 export function getPool(): Pool {

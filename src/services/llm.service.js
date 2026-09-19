@@ -20,17 +20,12 @@ const sanitizeDocumentName = name =>
 
 const isElectronMainProcess = () => !!process.versions.electron && process.type === 'browser';
 
-// Captured before any settings override so clearing the key in Settings can
-// fall back to the value from .env instead of leaving the app unconfigured.
-const ENV_API_KEY = process.env.ANTHROPIC_API_KEY;
-
 class LLMService {
   constructor() {
     this.client = null;
     this.isInitialized = false;
     this.requestCount = 0;
     this.errorCount = 0;
-    this.apiKey = null; // in-memory override for configured API key
     this.lastRequestStartedAt = 0;
     this.activeStream = null;
     this.activeController = null;
@@ -42,7 +37,7 @@ class LLMService {
   }
 
   initializeClient() {
-    const apiKey = this.apiKey || config.getApiKey('ANTHROPIC');
+    const apiKey = config.getApiKey('ANTHROPIC');
 
     if (!apiKey || typeof apiKey !== 'string' || apiKey.trim() === '' || apiKey === 'your-api-key-here') {
       logger.warn('Anthropic API key not configured');
@@ -129,29 +124,9 @@ class LLMService {
     return sections.join('\n\n');
   }
 
-  updateApiKey(apiKey) {
-    try {
-      this.apiKey = typeof apiKey === 'string' && apiKey.trim() ? apiKey.trim() : null;
-
-      if (this.apiKey) {
-        process.env.ANTHROPIC_API_KEY = this.apiKey;
-      } else if (ENV_API_KEY) {
-        process.env.ANTHROPIC_API_KEY = ENV_API_KEY;
-      } else {
-        delete process.env.ANTHROPIC_API_KEY;
-      }
-
-      this.initializeClient();
-      return { success: !!this.isInitialized };
-    } catch (error) {
-      logger.error('Failed to update Anthropic API key', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-
   getStats() {
     return {
-      hasApiKey: !!(this.apiKey || config.getApiKey('ANTHROPIC')),
+      hasApiKey: !!config.getApiKey('ANTHROPIC'),
       provider: 'anthropic',
       model: this.getModel(),
       groundingDocuments: this.groundingDocuments.length,
@@ -252,7 +227,7 @@ class LLMService {
 
   assertReady() {
     if (!this.isInitialized) {
-      const error = new Error('Claude is not configured. Add ANTHROPIC_API_KEY to your .env or set the key in Settings.');
+      const error = new Error('Claude is not configured. Add ANTHROPIC_API_KEY to your .env.');
       error.errorAnalysis = { type: 'CONFIG_ERROR', userMessage: error.message };
       throw error;
     }

@@ -31,7 +31,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSkillPrompt: (skillName) => ipcRenderer.invoke('get-skill-prompt', skillName),
   
   // Claude (Anthropic) configuration
-  setLlmApiKey: (apiKey) => ipcRenderer.invoke('set-llm-api-key', apiKey),
   getLlmStatus: () => ipcRenderer.invoke('get-llm-status'),
   testLlmConnection: () => ipcRenderer.invoke('test-llm-connection'),
   runLlmDiagnostics: () => ipcRenderer.invoke('run-llm-diagnostics'),

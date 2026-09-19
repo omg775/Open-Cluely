@@ -1,7 +1,6 @@
 import { removeDocument, revokeDevice } from "@/app/actions/dashboard";
-import { ApiKeyForm, DocumentUploadForm, ModelForm } from "@/app/dashboard/settings/SettingsForms";
+import { DocumentUploadForm, ModelForm } from "@/app/dashboard/settings/SettingsForms";
 import { requireUser } from "@/lib/auth";
-import { maskKey } from "@/lib/crypto";
 import { getSettings, listDeviceTokens, listDocuments, MODELS } from "@/lib/data";
 
 function formatWhen(date: Date | null): string {
@@ -27,15 +26,16 @@ export default async function SettingsPage() {
       <div>
         <h1 className="text-2xl font-semibold">Settings</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          These travel to the desktop app the next time you launch it.
+          These apply to the assistant in your browser, and to the desktop app if you use it.
         </p>
       </div>
 
       <section className="panel p-6">
-        <h2 className="text-base font-medium">Anthropic key</h2>
-        <div className="mt-4">
-          <ApiKeyForm maskedKey={settings.anthropicKey ? maskKey(settings.anthropicKey) : null} />
-        </div>
+        <h2 className="text-base font-medium">Claude access</h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          There is no API key to manage. Claude is called from our server with our own key, so
+          nothing about it ever reaches your browser.
+        </p>
       </section>
 
       <section className="panel p-6">
@@ -48,7 +48,7 @@ export default async function SettingsPage() {
       <section className="panel p-6">
         <h2 className="text-base font-medium">Document grounding</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Uploaded documents are sent to the assistant on launch and used to ground its answers.
+          Uploaded documents are attached to your questions and used to ground the answers.
         </p>
         <div className="mt-4">
           <DocumentUploadForm />

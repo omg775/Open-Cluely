@@ -7,7 +7,6 @@ import {
   deleteDocument,
   MODELS,
   revokeDeviceToken,
-  saveAnthropicKey,
   saveModel,
 } from "@/lib/data";
 import { requireUser } from "@/lib/auth";
@@ -27,28 +26,6 @@ export async function updateModel(_state: ActionState, formData: FormData): Prom
   await saveModel(user.userId, model);
   revalidatePath("/dashboard/settings");
   return { error: null, message: "Model preference saved." };
-}
-
-export async function updateAnthropicKey(
-  _state: ActionState,
-  formData: FormData
-): Promise<ActionState> {
-  const user = await requireUser();
-  const key = String(formData.get("anthropicKey") ?? "").trim();
-
-  if (formData.get("intent") === "remove") {
-    await saveAnthropicKey(user.userId, null);
-    revalidatePath("/dashboard/settings");
-    return { error: null, message: "API key removed." };
-  }
-
-  if (!key.startsWith("sk-ant-")) {
-    return { error: "That does not look like an Anthropic API key.", message: null };
-  }
-
-  await saveAnthropicKey(user.userId, key);
-  revalidatePath("/dashboard/settings");
-  return { error: null, message: "API key saved. It is encrypted at rest." };
 }
 
 export async function uploadDocument(

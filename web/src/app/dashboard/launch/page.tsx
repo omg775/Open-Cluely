@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import Link from "next/link";
 import { LaunchPanel } from "@/app/dashboard/launch/LaunchPanel";
 import { requireUser } from "@/lib/auth";
 import { getSettings, listDocuments } from "@/lib/data";
@@ -27,17 +28,29 @@ export default async function LaunchPage() {
       <div>
         <h1 className="text-2xl font-semibold">Launch assistant</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          OpenCluely is a desktop app — it captures and transcribes your screen and audio locally,
-          and nothing leaves your machine except the single Claude request that answers you.
+          The assistant runs in this browser. Screen frames and speech stay in your tab except for
+          the single Claude request that answers each question, and nothing spoken is stored.
         </p>
       </div>
 
-      <LaunchPanel
-        webBaseUrl={baseUrl}
-        hasKey={Boolean(settings.anthropicKey)}
-        model={settings.model}
-        documentCount={documents.length}
-      />
+      <div className="panel p-6">
+        <h2 className="text-base font-medium">Open in this browser</h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Nothing to install. Grant screen and microphone permission when the browser asks, and
+          answers stream in as questions come up.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Link href="/dashboard/assistant" className="btn btn-primary px-5 py-2.5">
+            Launch assistant
+          </Link>
+          <span className="text-xs text-[var(--muted)]">
+            Using {settings.model}
+            {documents.length > 0 ? ` · ${documents.length} grounding document(s)` : ""}
+          </span>
+        </div>
+      </div>
+
+      <LaunchPanel webBaseUrl={baseUrl} model={settings.model} />
     </div>
   );
 }

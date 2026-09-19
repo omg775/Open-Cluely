@@ -459,17 +459,15 @@
                     <div class="settings-item">
                         <div>
                             <div class="settings-item-label">Anthropic API Key</div>
-                            <div class="settings-item-description">Used for all reasoning. Leave empty to use
-                                <code>ANTHROPIC_API_KEY</code> from <code>.env</code>.</div>
+                            <div class="settings-item-description">Read from <code>ANTHROPIC_API_KEY</code> in
+                                <code>.env</code> at startup. There is nothing to enter here.</div>
                         </div>
-                        <input type="password" class="input-field" id="anthropicKey"
-                            placeholder="sk-ant-...">
                     </div>
                     <div class="settings-item">
                         <div>
                             <div class="settings-item-label">Test Claude Connection</div>
                             <div class="settings-item-description">Sends a tiny message to the Anthropic API to verify
-                                the key and model.</div>
+                                the configured key and model.</div>
                         </div>
                         <div style="display:flex; gap:8px; align-items:center;">
                             <button class="btn" id="testLlmBtn">Test Connection</button>

@@ -251,17 +251,7 @@ class ApplicationController {
     }
   }
 
-  /**
-   * Dashboard settings are authoritative: a key the account no longer has is
-   * cleared locally rather than left behind.
-   */
   applyAccountPayload({ settings = {}, documents = [] } = {}) {
-    if ("anthropicKey" in settings) {
-      const key = typeof settings.anthropicKey === "string" ? settings.anthropicKey.trim() : "";
-      llmService.updateApiKey(key || null);
-      this.persistSettings({ anthropicKey: key });
-    }
-
     llmService.setModel(typeof settings.model === "string" ? settings.model : null);
     llmService.setGroundingDocuments(documents);
   }
@@ -361,8 +351,6 @@ class ApplicationController {
       accountService.unlink();
       llmService.setGroundingDocuments([]);
       llmService.setModel(null);
-      llmService.updateApiKey(null);
-      this.persistSettings({ anthropicKey: "" });
       this.broadcastAccountStatus("Unlinked from the dashboard account");
       return accountService.getStatus();
     });
@@ -517,12 +505,6 @@ class ApplicationController {
         logger.error('Failed to get skill prompt', { skillName, error: error.message });
         return null;
       }
-    });
-
-    ipcMain.handle("set-llm-api-key", (event, apiKey) => {
-      const result = llmService.updateApiKey(apiKey);
-      const stats = llmService.getStats();
-      return Object.assign({ success: !!result.success }, stats, result.error ? { error: result.error } : {});
     });
 
     ipcMain.handle("get-llm-status", () => {
@@ -1187,8 +1169,6 @@ class ApplicationController {
         // pass through env-derived settings for UI convenience (masked)
         azureConfigured: !!process.env.AZURE_SPEECH_KEY && !!process.env.AZURE_SPEECH_REGION,
         speechAvailable: this.speechAvailable,
-        // include persisted key if present (UI expects to populate field)
-        anthropicKey: persisted.anthropicKey || null,
         account: accountService.getStatus(),
         llmStatus: llmService.getStats()
       };
@@ -1200,7 +1180,6 @@ class ApplicationController {
         selectedIcon: this.appIcon || "terminal",
         azureConfigured: !!process.env.AZURE_SPEECH_KEY && !!process.env.AZURE_SPEECH_REGION,
         speechAvailable: this.speechAvailable,
-        anthropicKey: null,
         llmStatus: llmService.getStats()
       };
     }
@@ -1239,19 +1218,7 @@ class ApplicationController {
 
       this.applySpeechSettings(settings);
 
-      // Apply an Anthropic key supplied via the settings UI immediately; an
-      // explicitly emptied field clears the override and falls back to .env.
-      if (typeof settings.anthropicKey === 'string') {
-        try {
-          llmService.updateApiKey(settings.anthropicKey || null);
-        } catch (e) {
-          logger.error('Failed to apply Anthropic API key from settings', { error: e.message });
-        }
-      }
-
-      const loggableSettings = Object.assign({}, settings);
-      if (loggableSettings.anthropicKey) loggableSettings.anthropicKey = '***REDACTED***';
-      logger.info("Settings saved successfully", loggableSettings);
+      logger.info("Settings saved successfully", settings);
       return { success: true };
     } catch (error) {
       logger.error("Failed to save settings", { error: error.message });
@@ -1294,7 +1261,8 @@ class ApplicationController {
       }
 
       const merged = Object.assign({}, existing, settings);
-      if (settings.anthropicKey === '') delete merged.anthropicKey;
+      // The key now comes from the environment only, so any legacy stored key goes.
+      delete merged.anthropicKey;
 
       // Ensure directory exists
       try {
@@ -1303,10 +1271,7 @@ class ApplicationController {
 
       fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2), { mode: 0o600 });
 
-      // Do not log sensitive values like API keys
-      const safeLog = Object.assign({}, settings);
-      if (safeLog.anthropicKey) safeLog.anthropicKey = '***REDACTED***';
-      logger.debug('Settings persisted to disk', { path: settingsPath, settings: safeLog });
+      logger.debug('Settings persisted to disk', { path: settingsPath, settings });
     } catch (error) {
       logger.error('Failed to persist settings', { error: error.message });
     }
@@ -1333,13 +1298,11 @@ class ApplicationController {
 
       speechService.updateSettings(persisted);
 
-      // An env-provided key always wins over a stored one
-      if (persisted.anthropicKey && !config.getApiKey('ANTHROPIC')) {
-        try {
-          llmService.updateApiKey(persisted.anthropicKey);
-        } catch (e) {
-          logger.error('Failed to apply persisted Anthropic key at startup', { error: e.message });
-        }
+      // Older builds stored a user-entered key here; drop it now that the key
+      // only ever comes from the environment.
+      if (persisted.anthropicKey) {
+        delete persisted.anthropicKey;
+        this.persistSettings({});
       }
 
       logger.info('Persisted settings loaded', { path: settingsPath, keys: Object.keys(persisted) });

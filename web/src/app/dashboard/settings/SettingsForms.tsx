@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import type { ActionState } from "@/app/actions/dashboard";
-import { updateAnthropicKey, updateModel, uploadDocument } from "@/app/actions/dashboard";
+import { updateModel, uploadDocument } from "@/app/actions/dashboard";
 
 const INITIAL: ActionState = { error: null, message: null };
 
@@ -18,48 +18,6 @@ function Status({ state }: { state: ActionState }) {
     return <p className="text-sm text-emerald-400">{state.message}</p>;
   }
   return null;
-}
-
-export function ApiKeyForm({ maskedKey }: { maskedKey: string | null }) {
-  const [state, formAction, pending] = useActionState<ActionState, FormData>(
-    updateAnthropicKey,
-    INITIAL
-  );
-
-  return (
-    <form action={formAction} className="flex flex-col gap-3">
-      <label className="flex flex-col gap-2 text-sm">
-        Anthropic API key
-        <input
-          className="input font-mono"
-          type="password"
-          name="anthropicKey"
-          placeholder={maskedKey ? `Saved: ${maskedKey}` : "sk-ant-…"}
-          autoComplete="off"
-        />
-      </label>
-      <p className="text-xs text-[var(--muted)]">
-        Encrypted at rest and only handed to your desktop app during launch.
-      </p>
-      <Status state={state} />
-      <div className="flex gap-2">
-        <button type="submit" className="btn btn-primary" disabled={pending}>
-          {pending ? "Saving…" : "Save key"}
-        </button>
-        {maskedKey ? (
-          <button
-            type="submit"
-            name="intent"
-            value="remove"
-            className="btn btn-secondary"
-            disabled={pending}
-          >
-            Remove
-          </button>
-        ) : null}
-      </div>
-    </form>
-  );
 }
 
 export function ModelForm({
