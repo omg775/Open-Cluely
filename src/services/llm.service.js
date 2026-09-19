@@ -7,6 +7,8 @@ const LANGUAGE_TITLES = { cpp: 'C++', c: 'C', python: 'Python', java: 'Java', ja
 const FENCE_TAGS = { cpp: 'cpp', c: 'c', python: 'python', java: 'java', javascript: 'javascript', js: 'javascript' };
 const SUPPORTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 
+const isElectronMainProcess = () => !!process.versions.electron && process.type === 'browser';
+
 class LLMService {
   constructor() {
     this.client = null;
@@ -36,7 +38,10 @@ class LLMService {
       this.client = new Anthropic({
         apiKey: apiKey.trim(),
         timeout: config.get('llm.anthropic.timeout'),
-        maxRetries: config.get('llm.anthropic.maxRetries')
+        maxRetries: config.get('llm.anthropic.maxRetries'),
+        // Electron's main process exposes browser globals, which the SDK reads
+        // as an untrusted client. The key never leaves this process.
+        dangerouslyAllowBrowser: isElectronMainProcess()
       });
       this.isInitialized = true;
 
