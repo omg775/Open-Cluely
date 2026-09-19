@@ -16,7 +16,7 @@ export function AuthForm({ mode, action }: Props) {
   return (
     <div className="mx-auto w-full max-w-sm px-6 py-20">
       <Link href="/" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
-        ← OpenCluely
+        ← DevinAi
       </Link>
       <h1 className="mt-6 text-2xl font-semibold">
         {isSignup ? "Create your account" : "Welcome back"}

@@ -15,9 +15,9 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OpenCluely — live context assistant",
+  title: "DevinAi — undetectable AI for meetings",
   description:
-    "A live assistant for meetings, research and note-taking. Grounded in your own documents, streamed from Claude, with nothing stored.",
+    "A live assistant for meetings, research and note-taking. Grounded in your own documents, streamed from Claude, invisible to screen share, with nothing stored.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

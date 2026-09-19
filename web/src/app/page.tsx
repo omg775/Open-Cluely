@@ -119,7 +119,7 @@ export default async function LandingPage() {
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
           <Link href="/" className="flex items-center gap-2 text-base font-bold tracking-tight">
             <span className="pulse-dot h-1.5 w-1.5 rounded-full" aria-hidden="true" />
-            OpenCluely
+            DevinAi
           </Link>
           <nav className="flex items-center gap-4 text-sm">
             <Link href="#how-it-helps" className="readout hidden hover:text-[var(--signal-deep)] sm:block">
@@ -150,11 +150,11 @@ export default async function LandingPage() {
         <section className="hero-wash">
           <div className="mx-auto w-full max-w-5xl px-6 pb-24 pt-24 text-center sm:pb-36 sm:pt-32">
             <h1 className="mx-auto max-w-[17ch] text-[2.9rem] font-extrabold leading-[0.93] tracking-[-0.04em] text-balance sm:text-[4.9rem]">
-              Answers while the conversation is still happening.
+              Undetectable AI for meetings.
             </h1>
             <p className="mx-auto mt-7 max-w-[46ch] text-lg leading-relaxed text-[var(--graphite)]">
-              OpenCluely listens to your meeting, reads your screen, and streams grounded answers
-              back — without storing a word of it.
+              DevinAi listens to your meeting, reads your screen, and streams grounded answers back
+              — invisible to screen share, storing nothing.
             </p>
             <div className="mt-9 flex flex-wrap justify-center gap-3">
               <Link href={session ? "/dashboard" : "/signup"} className="btn btn-primary px-7 py-3.5">
@@ -174,7 +174,7 @@ export default async function LandingPage() {
 
         <section id="how-it-helps" className="mx-auto w-full max-w-6xl px-6 py-28 sm:py-36">
           <h2 className="max-w-[20ch] text-4xl font-bold tracking-[-0.03em] sm:text-[3.25rem]">
-            How OpenCluely helps during a call
+            How DevinAi helps during a call
           </h2>
 
           <div className="mt-16 grid gap-7 lg:grid-cols-2">
@@ -260,7 +260,7 @@ export default async function LandingPage() {
       <footer className="border-t border-[var(--rule)]">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-6 py-10">
           <span className="readout">
-            OpenCluely — a live assistant for meetings, research and note-taking.
+            DevinAi — a live assistant for meetings, research and note-taking.
           </span>
           <a
             href="https://github.com/omg775/Open-Cluely"
