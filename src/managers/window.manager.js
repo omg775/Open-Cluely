@@ -204,6 +204,7 @@ class WindowManager {
       height: windowConfig.height,
       webPreferences: {
         ...config.get('window.webPreferences'),
+        preload: path.join(__dirname, '../../preload.js'),
         nodeIntegration: false,
         contextIsolation: true,
         backgroundThrottling: false,
@@ -1189,6 +1190,67 @@ class WindowManager {
     if (llmWindow) {
       llmWindow.hide();
     }
+  }
+
+  /**
+   * Live response window used for streaming: the overlay is visible and empty,
+   * waiting for deltas.
+   */
+  startLLMStream(metadata = {}) {
+    const llmWindow = this.getLiveLLMWindow();
+    if (!llmWindow) return;
+
+    this.streamId = (this.streamId || 0) + 1;
+    llmWindow.webContents.send('llm-stream-start', { streamId: this.streamId, metadata });
+    this.showOnCurrentDesktop(llmWindow);
+
+    if (this.bindWindows) {
+      this.positionBoundWindows();
+    }
+  }
+
+  streamLLMDelta(delta, accumulated) {
+    const llmWindow = this.getLiveLLMWindow();
+    if (!llmWindow) return;
+
+    llmWindow.webContents.send('llm-stream-delta', {
+      streamId: this.streamId,
+      delta,
+      content: accumulated
+    });
+  }
+
+  /**
+   * Low-profile error state: the overlay stays visible with a short message
+   * instead of spinning forever or vanishing.
+   */
+  showLLMError(message, metadata = {}) {
+    const llmWindow = this.getLiveLLMWindow();
+    if (!llmWindow) return;
+
+    llmWindow.webContents.send('display-llm-error', {
+      error: message,
+      metadata,
+      timestamp: new Date().toISOString()
+    });
+    this.showOnCurrentDesktop(llmWindow);
+
+    if (this.bindWindows) {
+      this.positionBoundWindows();
+    }
+
+    logger.info('LLM error state displayed', { message });
+  }
+
+  getLiveLLMWindow() {
+    if (this.isScreenBeingShared) return null;
+
+    const llmWindow = this.windows.get('llmResponse');
+    if (!llmWindow || llmWindow.isDestroyed()) {
+      logger.error('LLM response window not available');
+      return null;
+    }
+    return llmWindow;
   }
 
   showSettings() {

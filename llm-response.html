@@ -13,7 +13,9 @@
         .mr-2 { margin-right: 0.5rem; }
 
         body {
-            background: linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(20, 20, 20, 0.5) 100%);;
+            /* Opaque enough that busy backgrounds never bleed into the text. */
+            background: linear-gradient(135deg, rgba(8, 8, 10, 0.88) 0%, rgba(20, 20, 24, 0.92) 100%);
+            backdrop-filter: blur(18px) saturate(120%);
             -webkit-app-region: no-drag;
             color: white;
             margin: 0;
@@ -43,14 +45,14 @@
         .markdown-content ul, .markdown-content ol { margin-bottom: 0.8rem; padding-left: 1.2rem; font-size: 0.875rem; }
         .markdown-content li { margin-bottom: 0.4rem; color: white; font-size: 0.875rem; }
         .markdown-content code { 
-            background-color: rgba(0, 0, 0, 0.4); 
+            background-color: rgba(0, 0, 0, 0.6); 
             padding: 0.2rem 0.4rem; 
             border-radius: 0.25rem; 
             font-family: 'Courier New', monospace;
             color: #e5e7eb;
         }
         .markdown-content pre { 
-            background-color: rgba(0, 0, 0, 0.4); 
+            background-color: rgba(0, 0, 0, 0.6); 
             padding: 1rem; 
             border-radius: 0.5rem; 
             margin: 1rem 0;
@@ -401,6 +403,32 @@
             transition: background 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
         }
         .copy-btn:hover { background: rgba(0,0,0,0.7); }
+        .error-state {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-top: 32px;
+            padding: 10px 14px;
+            font-size: 12px;
+            line-height: 1.45;
+            color: rgba(255,255,255,0.82);
+        }
+        .error-state.hidden { display: none; }
+        .error-dot {
+            flex: 0 0 auto;
+            width: 6px;
+            height: 6px;
+            margin-top: 6px;
+            border-radius: 50%;
+            background: rgba(255,138,128,0.9);
+        }
+        .error-message { word-break: break-word; }
+        .markdown-content.streaming::after {
+            content: '▍';
+            opacity: 0.55;
+            animation: caret 1s steps(2) infinite;
+        }
+        @keyframes caret { 50% { opacity: 0; } }
         .copy-btn.copied { 
             background: rgba(76,175,80,0.85); 
             border-color: rgba(76,175,80,0.95); 
@@ -428,6 +456,12 @@
                     <div class="bouncing-dot"></div>
                 </div>
             </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="error-state hidden">
+            <span class="error-dot"></span>
+            <span id="error-message" class="error-message"></span>
         </div>
 
         <!-- Response Content -->
@@ -466,6 +500,9 @@
         let isInteractive = false;
         let scrollableElements = [];
         let initialized = false;
+        let activeStreamId = null;
+        let streamBuffer = '';
+        let streamRenderHandle = null;
         
         // Immediate logging to verify script execution
         console.log('[LLM-RESPONSE] Script tag executed');
@@ -523,6 +560,27 @@
                     console.log('[LLM-RESPONSE] show-loading received');
                     showLoadingState();
                 });
+
+                if (window.electronAPI.onLlmStreamStart) {
+                    window.electronAPI.onLlmStreamStart((event, data) => {
+                        const payload = data || event;
+                        beginStream(payload?.streamId);
+                    });
+                }
+
+                if (window.electronAPI.onLlmStreamDelta) {
+                    window.electronAPI.onLlmStreamDelta((event, data) => {
+                        const payload = data || event;
+                        appendStreamContent(payload?.streamId, payload?.content);
+                    });
+                }
+
+                if (window.electronAPI.onDisplayLlmError) {
+                    window.electronAPI.onDisplayLlmError((event, data) => {
+                        const payload = data || event;
+                        showErrorState(payload?.error);
+                    });
+                }
                 
                 // Listen for LLM response
                 window.electronAPI.onDisplayLlmResponse(function() {
@@ -550,6 +608,7 @@
                         }
                         
                         hideLoadingState();
+                        endStream();
                         displayResponse(actualData);
                         setupScrolling();
                         setTimeout(verifyDisplayState, 500);
@@ -566,9 +625,91 @@
             }
         } // end initLLMResponseWindow
 
+        /**
+         * Streaming: tokens render as plain markdown in the full-width panel,
+         * and the final display-llm-response re-renders with the split layout.
+         */
+        function beginStream(streamId) {
+            if (streamRenderHandle !== null) {
+                cancelAnimationFrame(streamRenderHandle);
+                streamRenderHandle = null;
+            }
+
+            streamBuffer = '';
+            activeStreamId = streamId ?? null;
+            hideErrorState();
+            hideLoadingState();
+
+            const responseElement = document.getElementById('response-content');
+            const splitLayout = document.getElementById('split-layout');
+            const fullContent = document.getElementById('full-content');
+            const fullMarkdown = document.getElementById('full-markdown');
+
+            if (responseElement) responseElement.classList.remove('hidden');
+            if (splitLayout) splitLayout.classList.add('hidden');
+            if (fullContent) fullContent.classList.remove('hidden');
+            if (fullMarkdown) {
+                fullMarkdown.innerHTML = '';
+                fullMarkdown.classList.add('streaming');
+            }
+        }
+
+        function appendStreamContent(streamId, content) {
+            // Ignore deltas from a superseded request
+            if (activeStreamId === null || streamId !== activeStreamId) return;
+            if (typeof content !== 'string') return;
+
+            streamBuffer = content;
+            if (streamRenderHandle !== null) return;
+
+            streamRenderHandle = requestAnimationFrame(() => {
+                streamRenderHandle = null;
+                const fullMarkdown = document.getElementById('full-markdown');
+                if (!fullMarkdown) return;
+
+                fullMarkdown.innerHTML = renderMarkdown(streamBuffer);
+                const panel = fullMarkdown.closest('.full-content-inner') || fullMarkdown.parentElement;
+                if (panel) panel.scrollTop = panel.scrollHeight;
+            });
+        }
+
+        function endStream() {
+            // A frame queued by the last delta would otherwise repaint the panel
+            // with the cleared buffer after the final response is rendered.
+            if (streamRenderHandle !== null) {
+                cancelAnimationFrame(streamRenderHandle);
+                streamRenderHandle = null;
+            }
+
+            activeStreamId = null;
+            streamBuffer = '';
+            const fullMarkdown = document.getElementById('full-markdown');
+            if (fullMarkdown) fullMarkdown.classList.remove('streaming');
+        }
+
+        function showErrorState(message) {
+            endStream();
+            hideLoadingState();
+
+            const responseElement = document.getElementById('response-content');
+            const errorElement = document.getElementById('error-state');
+            const errorMessage = document.getElementById('error-message');
+
+            if (responseElement) responseElement.classList.add('hidden');
+            if (errorMessage) errorMessage.textContent = message || 'Something went wrong. Try again.';
+            if (errorElement) errorElement.classList.remove('hidden');
+        }
+
+        function hideErrorState() {
+            const errorElement = document.getElementById('error-state');
+            if (errorElement) errorElement.classList.add('hidden');
+        }
+
         function showLoadingState() {
             const loadingElement = document.getElementById('loading');
             const responseElement = document.getElementById('response-content');
+
+            hideErrorState();
             
             if (loadingElement) {
                 loadingElement.classList.remove('hidden');
@@ -595,14 +736,37 @@
 
         function renderMarkdown(text) {
             if (typeof marked !== 'undefined') {
-                return marked.parse ? marked.parse(text) : marked(text);
+                return sanitizeHtml(marked.parse ? marked.parse(text) : marked(text));
             }
 
             if (typeof markdown !== 'undefined' && typeof markdown.toHTML === 'function') {
-                return markdown.toHTML(text);
+                return sanitizeHtml(markdown.toHTML(text));
             }
 
             return escapeHtml(text).replace(/\n/g, '<br>');
+        }
+
+        const UNSAFE_TAGS = ['script', 'iframe', 'object', 'embed', 'link', 'meta', 'style', 'base', 'form'];
+
+        // Model output is untrusted: drop active markup before it reaches the DOM.
+        function sanitizeHtml(html) {
+            const doc = new DOMParser().parseFromString(String(html), 'text/html');
+
+            doc.body.querySelectorAll(UNSAFE_TAGS.join(',')).forEach(node => node.remove());
+
+            doc.body.querySelectorAll('*').forEach(node => {
+                Array.from(node.attributes).forEach(attr => {
+                    const name = attr.name.toLowerCase();
+                    const value = attr.value.replace(/\s+/g, '').toLowerCase();
+                    const isUrl = name === 'href' || name === 'src' || name === 'xlink:href';
+
+                    if (name.startsWith('on') || (isUrl && (value.startsWith('javascript:') || value.startsWith('data:text/html')))) {
+                        node.removeAttribute(attr.name);
+                    }
+                });
+            });
+
+            return doc.body.innerHTML;
         }
 
         function calculateContentMetrics(response, codeBlocks) {
@@ -634,6 +798,8 @@
         function displayResponse(data) {
             // Show content
             const responseElement = document.getElementById('response-content');
+
+            hideErrorState();
             
             if (responseElement) {
                 responseElement.classList.remove('hidden');

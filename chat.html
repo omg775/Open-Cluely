@@ -1161,10 +1161,13 @@
           if (data && data.status) {
             addMessage(data.status, 'system');
 
-            if (data.status.includes('started') || data.status.includes('Recording')) {
-              handleRecordingStarted();
-            } else if (data.status.includes('stopped') || data.status.includes('ended')) {
+            // "Recording stopped" matches both sets of keywords, so the stop
+            // case has to be checked first.
+            const status = data.status.toLowerCase();
+            if (status.includes('stopped') || status.includes('ended')) {
               handleRecordingStopped();
+            } else if (status.includes('started') || status.includes('listening to') || status.includes('hearing')) {
+              handleRecordingStarted();
             }
           }
         });
@@ -1172,7 +1175,7 @@
         // Listen for speech errors
         whysperAPI.onSpeechError((event, data) => {
           if (data && data.error) {
-            addMessage(`Error in recognizing speech`, 'error');
+            addMessage(data.error, 'error');
             handleRecordingStopped();
           }
         });
@@ -1226,7 +1229,7 @@
               }
             }
           } catch (error) {
-            addMessage("Error in recognizing speech", 'error');
+            addMessage(error && error.message ? error.message : 'Speech recognition failed', 'error');
           }
         });
       }

@@ -298,7 +298,7 @@ class SessionManager {
     if (actionLower.includes('speech') || actionLower.includes('transcription')) {
       return 'speech';
     }
-    if (actionLower.includes('llm') || actionLower.includes('gemini')) {
+    if (actionLower.includes('llm') || actionLower.includes('claude')) {
       return 'llm';
     }
     if (actionLower.includes('skill') || actionLower.includes('switch')) {

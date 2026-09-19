@@ -869,56 +869,57 @@ class MainWindowUI {
         });
     }
 
-    async showGeminiConfig() {
+    async showLlmConfig() {
         try {
-            const status = await window.electronAPI.getGeminiStatus();
-            
-            const modal = this.createGeminiConfigModal(status);
+            const status = await window.electronAPI.getLlmStatus();
+
+            const modal = this.createLlmConfigModal(status);
             document.body.appendChild(modal);
-            
-            logger.debug('Gemini config modal shown', { component: 'MainWindowUI' });
+
+            logger.debug('Claude config modal shown', { component: 'MainWindowUI' });
         } catch (error) {
-            logger.error('Failed to show Gemini config', {
+            logger.error('Failed to show Claude config', {
                 component: 'MainWindowUI',
                 error: error.message
             });
-            this.showNotification('Failed to load Gemini configuration', 'error');
+            this.showNotification('Failed to load Claude configuration', 'error');
         }
     }
 
-    createGeminiConfigModal(status) {
+    createLlmConfigModal(status) {
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
         modal.innerHTML = `
             <div class="bg-gray-900 text-white p-6 rounded-lg max-w-md w-full">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold">🤖 Gemini Flash 1.5 Configuration</h2>
+                    <h2 class="text-xl font-bold">Claude Configuration</h2>
                     <button class="text-gray-400 hover:text-white" onclick="this.closest('.fixed').remove()">✕</button>
                 </div>
-                
+
                 <div class="mb-4 p-3 rounded ${status.hasApiKey ? 'bg-green-900' : 'bg-red-900'}">
                     <p><strong>Status:</strong> ${status.hasApiKey ? 'Configured' : 'Not Configured'}</p>
                     <p><strong>Model:</strong> ${status.model}</p>
                 </div>
-                
+
                 <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2">API Key:</label>
-                    <input type="password" id="geminiApiKey" placeholder="Enter your Gemini API key" 
+                    <label class="block text-sm font-medium mb-2">Anthropic API Key:</label>
+                    <input type="password" id="anthropicApiKey" placeholder="sk-ant-..."
                            class="w-full p-2 bg-gray-800 border border-gray-600 rounded text-white">
                     <p class="text-xs text-gray-400 mt-1">
-                        Get your API key from: <a href="https://makersuite.google.com/app/apikey" target="_blank" class="text-blue-400">Google AI Studio</a>
+                        Create a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" class="text-blue-400">console.anthropic.com</a>,
+                        or set ANTHROPIC_API_KEY in your .env file.
                     </p>
                 </div>
-                
+
                 <div class="flex space-x-2">
-                    <button onclick="mainWindowUI.configureGemini()" class="flex-1 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
+                    <button onclick="mainWindowUI.configureLlm()" class="flex-1 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
                         Configure
                     </button>
-                    <button onclick="mainWindowUI.testGeminiConnection()" class="flex-1 bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
+                    <button onclick="mainWindowUI.testLlmConnection()" class="flex-1 bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
                         Test Connection
                     </button>
                 </div>
-                
+
                 <div class="mt-4 text-center">
                     <button class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded" onclick="this.closest('.fixed').remove()">
                         Close
@@ -929,52 +930,52 @@ class MainWindowUI {
         return modal;
     }
 
-    async configureGemini() {
-        const apiKey = document.getElementById('geminiApiKey').value.trim();
+    async configureLlm() {
+        const apiKey = document.getElementById('anthropicApiKey').value.trim();
         if (!apiKey) {
             this.showNotification('Please enter an API key', 'error');
             return;
         }
-        
+
         try {
-            const result = await window.electronAPI.setGeminiApiKey(apiKey);
+            const result = await window.electronAPI.setLlmApiKey(apiKey);
             if (result.success) {
-                this.showNotification('Gemini API key configured successfully!', 'success');
+                this.showNotification('Anthropic API key configured', 'success');
                 document.querySelector('.fixed').remove();
-                
-                logger.info('Gemini API key configured', { component: 'MainWindowUI' });
+
+                logger.info('Anthropic API key configured', { component: 'MainWindowUI' });
             } else {
                 this.showNotification(`Configuration failed: ${result.error}`, 'error');
-                logger.error('Gemini configuration failed', {
+                logger.error('Claude configuration failed', {
                     component: 'MainWindowUI',
                     error: result.error
                 });
             }
         } catch (error) {
             this.showNotification(`Error: ${error.message}`, 'error');
-            logger.error('Gemini configuration error', {
+            logger.error('Claude configuration error', {
                 component: 'MainWindowUI',
                 error: error.message
             });
         }
     }
 
-    async testGeminiConnection() {
+    async testLlmConnection() {
         try {
-            const result = await window.electronAPI.testGeminiConnection();
+            const result = await window.electronAPI.testLlmConnection();
             if (result.success) {
-                this.showNotification('Gemini connection test successful!', 'success');
-                logger.info('Gemini connection test successful', { component: 'MainWindowUI' });
+                this.showNotification('Claude connection test successful', 'success');
+                logger.info('Claude connection test successful', { component: 'MainWindowUI' });
             } else {
                 this.showNotification(`Connection test failed: ${result.error}`, 'error');
-                logger.error('Gemini connection test failed', {
+                logger.error('Claude connection test failed', {
                     component: 'MainWindowUI',
                     error: result.error
                 });
             }
         } catch (error) {
             this.showNotification(`Error: ${error.message}`, 'error');
-            logger.error('Gemini connection test error', {
+            logger.error('Claude connection test error', {
                 component: 'MainWindowUI',
                 error: error.message
             });

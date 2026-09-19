@@ -37,10 +37,14 @@ class ApplicationController {
       settings: { title: "Settings" },
     };
 
-    this.setupStealth();
+    // Pending transcript text waiting for the debounce window to close
+    this.pendingTranscript = null;
+    this.transcriptDebounceTimer = null;
+
+    this.setupProcessDisguise();
     this.setupEventHandlers();
 
-    // Load persisted settings (including Gemini key) as soon as controller is constructed
+    // Load persisted settings (including the Anthropic key) as soon as controller is constructed
     try {
       this.loadPersistedSettings();
     } catch (e) {
@@ -48,12 +52,12 @@ class ApplicationController {
     }
   }
 
-  setupStealth() {
-    if (config.get("stealth.disguiseProcess")) {
+  setupProcessDisguise() {
+    if (config.get("overlay.disguiseProcess")) {
       process.title = config.get("app.processTitle");
     }
 
-    // Set default stealth app name early
+    // Keep the overlay out of the dock/taskbar under a neutral name
     if (app && typeof app.setName === 'function') {
       app.setName("Terminal ");
     }
@@ -61,7 +65,7 @@ class ApplicationController {
 
     if (
       process.platform === "darwin" &&
-      config.get("stealth.noAttachConsole")
+      config.get("overlay.noAttachConsole")
     ) {
       process.env.ELECTRON_NO_ATTACH_CONSOLE = "1";
       process.env.ELECTRON_NO_ASAR = "1";
@@ -112,7 +116,6 @@ class ApplicationController {
   }
 
   async onAppReady() {
-    // Force stealth mode IMMEDIATELY when app is ready
     app.setName("Terminal ");
     process.title = "Terminal ";
 
@@ -126,7 +129,6 @@ class ApplicationController {
 
     try {
       this.setupPermissions();
-      this.setupNetworkConfiguration();
 
       // Small delay to ensure desktop/space detection is accurate
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -134,7 +136,6 @@ class ApplicationController {
       await windowManager.initializeWindows();
       this.setupGlobalShortcuts();
 
-      // Initialize default stealth mode with terminal icon
       this.updateAppIcon("terminal");
 
       this.isReady = true;
@@ -151,30 +152,6 @@ class ApplicationController {
       });
       app.quit();
     }
-  }
-
-  setupNetworkConfiguration() {
-    // Configure session to handle network requests better
-    const ses = session.defaultSession;
-
-    // Allow HTTPS requests to Google APIs
-    ses.webRequest.onBeforeSendHeaders((details, callback) => {
-      if (details.url.includes('generativelanguage.googleapis.com')) {
-        details.requestHeaders['User-Agent'] = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.156 Safari/537.36';
-      }
-      callback({ requestHeaders: details.requestHeaders });
-    });
-
-    // Handle certificate errors for Google APIs
-    ses.setCertificateVerifyProc((request, callback) => {
-      if (request.hostname === 'generativelanguage.googleapis.com') {
-        callback(0); // Trust Google's certificates
-      } else {
-        callback(-2); // Use default verification
-      }
-    });
-
-    logger.debug('Network configuration applied for Gemini API');
   }
 
   setupPermissions() {
@@ -231,27 +208,15 @@ class ApplicationController {
     });
 
     speechService.on("transcription", (text) => {
-      // Add transcription to session memory
-      sessionManager.addUserInput(text, 'speech');
-
+      // Session memory is written once the debounce window closes, so the
+      // combined utterance is stored as a single turn rather than per chunk.
       const windows = BrowserWindow.getAllWindows();
 
       windows.forEach((window) => {
         window.webContents.send("transcription-received", { text });
       });
 
-      // Automatically process transcription with LLM for intelligent response
-      setTimeout(async () => {
-        try {
-          const sessionHistory = sessionManager.getOptimizedHistory();
-          await this.processTranscriptionWithLLM(text, sessionHistory);
-        } catch (error) {
-          logger.error("Failed to process transcription with LLM", {
-            error: error.message,
-            text: text.substring(0, 100)
-          });
-        }
-      }, 500);
+      this.queueTranscriptForLLM(text);
     });
 
     speechService.on("interim-transcription", (text) => {
@@ -406,6 +371,7 @@ class ApplicationController {
     });
 
     ipcMain.handle("clear-session-memory", () => {
+      this.discardPendingTranscript();
       sessionManager.clear();
       windowManager.broadcastToAllWindows("session-cleared");
       return { success: true };
@@ -426,18 +392,13 @@ class ApplicationController {
       sessionManager.addUserInput(text, 'chat');
       logger.debug('Chat message added to session memory', { textLength: text.length });
 
-      // Process typed message with LLM in the same way as transcribed text
-      setTimeout(async () => {
-        try {
-          const sessionHistory = sessionManager.getOptimizedHistory();
-          await this.processTranscriptionWithLLM(text, sessionHistory);
-        } catch (error) {
-          logger.error("Failed to process chat message with LLM", {
-            error: error.message,
-            text: text.substring(0, 100)
-          });
-        }
-      }, 500);
+      // Typed messages are intentional, so they bypass the transcript debounce
+      this.processTranscriptionWithLLM(text, sessionManager.getOptimizedHistory()).catch((error) => {
+        logger.error("Failed to process chat message with LLM", {
+          error: error.message,
+          text: text.substring(0, 100)
+        });
+      });
 
       return { success: true };
     });
@@ -453,13 +414,13 @@ class ApplicationController {
       }
     });
 
-    ipcMain.handle("set-gemini-api-key", (event, apiKey) => {
+    ipcMain.handle("set-llm-api-key", (event, apiKey) => {
       const result = llmService.updateApiKey(apiKey);
       const stats = llmService.getStats();
       return Object.assign({ success: !!result.success }, stats, result.error ? { error: result.error } : {});
     });
 
-    ipcMain.handle("get-gemini-status", () => {
+    ipcMain.handle("get-llm-status", () => {
       return llmService.getStats();
     });
 
@@ -489,18 +450,17 @@ class ApplicationController {
       return windowManager.getWindowBindingStatus();
     });
 
-    ipcMain.handle("test-gemini-connection", async () => {
+    ipcMain.handle("test-llm-connection", async () => {
       return await llmService.testConnection();
     });
 
-    ipcMain.handle("run-gemini-diagnostics", async () => {
+    ipcMain.handle("run-llm-diagnostics", async () => {
       try {
-        const connectivity = await llmService.checkNetworkConnectivity();
         const apiTest = await llmService.testConnection();
 
         return {
           success: true,
-          connectivity,
+          stats: llmService.getStats(),
           apiTest,
           timestamp: new Date().toISOString()
         };
@@ -669,6 +629,7 @@ class ApplicationController {
 
   clearSessionMemory() {
     try {
+      this.discardPendingTranscript();
       sessionManager.clear();
       windowManager.broadcastToAllWindows("session-cleared");
       logger.info("Session memory cleared via global shortcut");
@@ -759,6 +720,71 @@ class ApplicationController {
     windowManager.broadcastToAllWindows("skill-updated", { skill: newSkill });
   }
 
+  needsProgrammingLanguage() {
+    return ['dsa'].includes(this.activeSkill);
+  }
+
+  activeCodingLanguage() {
+    return this.needsProgrammingLanguage() ? this.codingLanguage : null;
+  }
+
+  /**
+   * Warm the skill prompt cache so the prompt disk read overlaps with capture.
+   */
+  async warmSkillPrompt() {
+    try {
+      const { promptLoader } = require('./prompt-loader');
+      return promptLoader.getSkillPrompt(this.activeSkill, this.activeCodingLanguage());
+    } catch (error) {
+      logger.debug('Skill prompt warmup failed', { error: error.message });
+      return null;
+    }
+  }
+
+  /**
+   * Build an onDelta handler that flips the overlay from loading to streaming
+   * on the first token and appends afterwards.
+   */
+  createStreamHandler(metadata) {
+    let started = false;
+    return (delta, accumulated) => {
+      if (!started) {
+        started = true;
+        windowManager.startLLMStream(metadata);
+      }
+      windowManager.streamLLMDelta(delta, accumulated);
+    };
+  }
+
+  /**
+   * Surface a failure in the overlay instead of leaving it spinning or hidden.
+   */
+  reportLLMFailure(error, context) {
+    if (error && error.aborted) {
+      logger.debug('Claude request superseded by a newer one', { context });
+      return;
+    }
+
+    const message = error?.errorAnalysis?.userMessage || error?.message || 'Claude request failed.';
+
+    logger.error('Claude request failed', {
+      context,
+      error: message,
+      skill: this.activeSkill,
+      stack: error?.originalError?.stack || error?.stack
+    });
+
+    windowManager.showLLMError(message, { skill: this.activeSkill, context });
+    this.broadcastLLMError(message);
+
+    sessionManager.addConversationEvent({
+      role: 'system',
+      content: `${context} failed: ${message}`,
+      action: 'llm_error',
+      metadata: { error: message, skill: this.activeSkill, context }
+    });
+  }
+
   async triggerScreenshotOCR() {
     if (!this.isReady) {
       logger.warn("Screenshot requested before application ready");
@@ -770,235 +796,154 @@ class ApplicationController {
     try {
       windowManager.showLLMLoading();
 
-      const capture = await captureService.captureAndProcess();
+      // Capture the screen while the skill prompt loads in parallel.
+      const [capture] = await Promise.all([
+        captureService.captureAndProcess(),
+        this.warmSkillPrompt()
+      ]);
 
       if (!capture.imageBuffer || !capture.imageBuffer.length) {
-        windowManager.hideLLMResponse();
         this.broadcastOCRError("Failed to capture screenshot image");
+        windowManager.showLLMError("Could not capture the screen.", { skill: this.activeSkill });
         return;
       }
 
-      // Use image directly with LLM and active skill; do not send chat messages here
       const sessionHistory = sessionManager.getOptimizedHistory();
-
-      const skillsRequiringProgrammingLanguage = ['dsa'];
-      const needsProgrammingLanguage = skillsRequiringProgrammingLanguage.includes(this.activeSkill);
+      const responseMetadata = { skill: this.activeSkill, isImageAnalysis: true };
 
       const llmResult = await llmService.processImageWithSkill(
         capture.imageBuffer,
         capture.mimeType || 'image/png',
         this.activeSkill,
         sessionHistory.recent,
-        needsProgrammingLanguage ? this.codingLanguage : null
+        this.activeCodingLanguage(),
+        { onDelta: this.createStreamHandler(responseMetadata) }
       );
 
-      // Record model response in session
       sessionManager.addModelResponse(llmResult.response, {
         skill: this.activeSkill,
         processingTime: llmResult.metadata.processingTime,
-        usedFallback: llmResult.metadata.usedFallback,
         isImageAnalysis: true
       });
 
       windowManager.showLLMResponse(llmResult.response, {
         skill: this.activeSkill,
         processingTime: llmResult.metadata.processingTime,
-        usedFallback: llmResult.metadata.usedFallback,
+        model: llmResult.metadata.model,
         isImageAnalysis: true
       });
 
       this.broadcastLLMSuccess(llmResult);
+
+      logger.debug('Screenshot analysis completed', { duration: Date.now() - startTime });
     } catch (error) {
-      logger.error("Screenshot OCR process failed", {
-        error: error.message,
-        duration: Date.now() - startTime,
-      });
-
-      windowManager.hideLLMResponse();
-      this.broadcastOCRError(error.message);
-
-      sessionManager.addConversationEvent({
-        role: 'system',
-        content: `Screenshot OCR failed: ${error.message}`,
-        action: 'ocr_error',
-        metadata: {
-          error: error.message
-        }
-      });
+      this.reportLLMFailure(error, 'Screenshot analysis');
     }
   }
 
   async processWithLLM(text, sessionHistory) {
     try {
-      // Add user input to session memory
       sessionManager.addUserInput(text, 'llm_input');
 
-      // Check if current skill needs programming language context
-      const skillsRequiringProgrammingLanguage = ['dsa'];
-      const needsProgrammingLanguage = skillsRequiringProgrammingLanguage.includes(this.activeSkill);
+      const responseMetadata = { skill: this.activeSkill };
+      windowManager.showLLMLoading();
 
       const llmResult = await llmService.processTextWithSkill(
         text,
         this.activeSkill,
         sessionHistory.recent,
-        needsProgrammingLanguage ? this.codingLanguage : null
+        this.activeCodingLanguage(),
+        { onDelta: this.createStreamHandler(responseMetadata) }
       );
 
-      logger.info("LLM processing completed, showing response", {
-        responseLength: llmResult.response.length,
-        skill: this.activeSkill,
-        programmingLanguage: needsProgrammingLanguage ? this.codingLanguage : 'not applicable',
-        processingTime: llmResult.metadata.processingTime,
-        responsePreview: llmResult.response.substring(0, 200) + "...",
-      });
-
-      // Add LLM response to session memory
       sessionManager.addModelResponse(llmResult.response, {
         skill: this.activeSkill,
-        processingTime: llmResult.metadata.processingTime,
-        usedFallback: llmResult.metadata.usedFallback,
+        processingTime: llmResult.metadata.processingTime
       });
 
       windowManager.showLLMResponse(llmResult.response, {
         skill: this.activeSkill,
         processingTime: llmResult.metadata.processingTime,
-        usedFallback: llmResult.metadata.usedFallback,
+        model: llmResult.metadata.model
       });
 
       this.broadcastLLMSuccess(llmResult);
     } catch (error) {
-      logger.error("LLM processing failed", {
-        error: error.message,
-        skill: this.activeSkill,
-      });
-
-      windowManager.hideLLMResponse();
-      sessionManager.addConversationEvent({
-        role: 'system',
-        content: `LLM processing failed: ${error.message}`,
-        action: 'llm_error',
-        metadata: {
-          error: error.message,
-          skill: this.activeSkill
-        }
-      });
-
-      this.broadcastLLMError(error.message);
+      this.reportLLMFailure(error, 'Text analysis');
     }
   }
 
-  async processTranscriptionWithLLM(text, sessionHistory) {
-    try {
-      // Validate input text
-      if (!text || typeof text !== 'string' || text.trim().length === 0) {
-        logger.warn("Skipping LLM processing for empty or invalid transcription", {
-          textType: typeof text,
-          textLength: text ? text.length : 0
-        });
-        return;
-      }
+  /**
+   * Collect transcript chunks and only reason over them once the speaker has
+   * paused, so a burst of small chunks becomes a single Claude request.
+   */
+  queueTranscriptForLLM(text) {
+    if (!text || typeof text !== 'string' || !text.trim()) return;
 
-      const cleanText = text.trim();
-      if (cleanText.length < 2) {
-        logger.debug("Skipping LLM processing for very short transcription", {
-          text: cleanText
-        });
-        return;
-      }
+    this.pendingTranscript = this.pendingTranscript
+      ? `${this.pendingTranscript} ${text.trim()}`
+      : text.trim();
 
-      logger.info("Processing transcription with intelligent LLM response", {
-        skill: this.activeSkill,
-        textLength: cleanText.length,
-        textPreview: cleanText.substring(0, 100) + "..."
+    if (this.transcriptDebounceTimer) clearTimeout(this.transcriptDebounceTimer);
+
+    const debounceMs = config.get('llm.anthropic.transcriptDebounceMs') || 0;
+    this.transcriptDebounceTimer = setTimeout(() => {
+      const pending = this.pendingTranscript;
+      this.pendingTranscript = null;
+      this.transcriptDebounceTimer = null;
+
+      this.processTranscriptionWithLLM(pending, sessionManager.getOptimizedHistory()).catch((error) => {
+        logger.error("Failed to process transcript with Claude", { error: error.message });
       });
+    }, debounceMs);
+  }
 
-      // Check if current skill needs programming language context
-      const skillsRequiringProgrammingLanguage = ['dsa'];
-      const needsProgrammingLanguage = skillsRequiringProgrammingLanguage.includes(this.activeSkill);
+  discardPendingTranscript() {
+    if (this.transcriptDebounceTimer) {
+      clearTimeout(this.transcriptDebounceTimer);
+      this.transcriptDebounceTimer = null;
+    }
+    this.pendingTranscript = null;
+    llmService.abortActiveRequest();
+  }
+
+  async processTranscriptionWithLLM(text, sessionHistory) {
+    const cleanText = typeof text === 'string' ? text.trim() : '';
+    if (cleanText.length < 2) {
+      logger.debug("Skipping Claude call for empty or very short transcript", { length: cleanText.length });
+      return;
+    }
+
+    try {
+      const responseMetadata = { skill: this.activeSkill, isTranscriptionResponse: true };
+      windowManager.showLLMLoading();
 
       const llmResult = await llmService.processTranscriptionWithIntelligentResponse(
         cleanText,
         this.activeSkill,
         sessionHistory.recent,
-        needsProgrammingLanguage ? this.codingLanguage : null
+        this.activeCodingLanguage(),
+        { onDelta: this.createStreamHandler(responseMetadata) }
       );
 
-      // Add LLM response to session memory
+      sessionManager.addUserInput(cleanText, 'speech');
       sessionManager.addModelResponse(llmResult.response, {
         skill: this.activeSkill,
         processingTime: llmResult.metadata.processingTime,
-        usedFallback: llmResult.metadata.usedFallback,
         isTranscriptionResponse: true
       });
 
-      // Send response to chat windows
       this.broadcastTranscriptionLLMResponse(llmResult);
 
-      // Show the LLM Response window stealthily
       windowManager.showLLMResponse(llmResult.response, {
         skill: this.activeSkill,
         processingTime: llmResult.metadata.processingTime,
-        usedFallback: llmResult.metadata.usedFallback,
+        model: llmResult.metadata.model,
         isTranscriptionResponse: true
       });
-
-      logger.info("Transcription LLM response completed", {
-        responseLength: llmResult.response.length,
-        skill: this.activeSkill,
-        programmingLanguage: needsProgrammingLanguage ? this.codingLanguage : 'not applicable',
-        processingTime: llmResult.metadata.processingTime
-      });
-
     } catch (error) {
-      logger.error("Transcription LLM processing failed", {
-        error: error.message,
-        errorStack: error.stack,
-        skill: this.activeSkill,
-        text: text ? text.substring(0, 100) : 'undefined'
-      });
-
-      // Try to provide a fallback response
-      try {
-        const fallbackResult = llmService.generateIntelligentFallbackResponse(text, this.activeSkill);
-
-        sessionManager.addModelResponse(fallbackResult.response, {
-          skill: this.activeSkill,
-          processingTime: fallbackResult.metadata.processingTime,
-          usedFallback: true,
-          isTranscriptionResponse: true,
-          fallbackReason: error.message
-        });
-
-        this.broadcastTranscriptionLLMResponse(fallbackResult);
-
-        // Show the fallback response in the LLM window
-        windowManager.showLLMResponse(fallbackResult.response, {
-          skill: this.activeSkill,
-          processingTime: fallbackResult.metadata.processingTime,
-          usedFallback: true,
-          isTranscriptionResponse: true
-        });
-
-        logger.info("Used fallback response for transcription", {
-          skill: this.activeSkill,
-          fallbackResponse: fallbackResult.response
-        });
-
-      } catch (fallbackError) {
-        logger.error("Fallback response also failed", {
-          fallbackError: fallbackError.message
-        });
-
-        sessionManager.addConversationEvent({
-          role: 'system',
-          content: `Transcription LLM processing failed: ${error.message}`,
-          action: 'transcription_llm_error',
-          metadata: {
-            error: error.message,
-            skill: this.activeSkill
-          }
-        });
-      }
+      sessionManager.addUserInput(cleanText, 'speech');
+      this.reportLLMFailure(error, 'Live transcript response');
     }
   }
 
@@ -1086,6 +1031,17 @@ class ApplicationController {
 
   onWillQuit() {
     globalShortcut.unregisterAll();
+
+    if (this.transcriptDebounceTimer) {
+      clearTimeout(this.transcriptDebounceTimer);
+      this.transcriptDebounceTimer = null;
+    }
+    llmService.abortActiveRequest();
+
+    if (typeof speechService.dispose === 'function') {
+      speechService.dispose();
+    }
+
     windowManager.destroyAllWindows();
 
     const sessionStats = sessionManager.getMemoryUsage();
@@ -1115,6 +1071,9 @@ class ApplicationController {
       }
 
       return {
+        // Speech fields show what the service will actually use, so .env values
+        // are visible in the UI instead of empty placeholders.
+        ...speechService.getStatus().effectiveSettings,
         codingLanguage: this.codingLanguage || persisted.codingLanguage || "cpp",
         activeSkill: this.activeSkill || persisted.activeSkill || "dsa",
         appIcon: this.appIcon || persisted.appIcon || "terminal",
@@ -1122,9 +1081,9 @@ class ApplicationController {
         // pass through env-derived settings for UI convenience (masked)
         azureConfigured: !!process.env.AZURE_SPEECH_KEY && !!process.env.AZURE_SPEECH_REGION,
         speechAvailable: this.speechAvailable,
-        // include persisted geminiKey if present (UI expects to populate field)
-        geminiKey: persisted.geminiKey || null,
-        geminiServiceAccount: persisted.geminiServiceAccount || null
+        // include persisted key if present (UI expects to populate field)
+        anthropicKey: persisted.anthropicKey || null,
+        llmStatus: llmService.getStats()
       };
     } catch (error) {
       return {
@@ -1134,7 +1093,8 @@ class ApplicationController {
         selectedIcon: this.appIcon || "terminal",
         azureConfigured: !!process.env.AZURE_SPEECH_KEY && !!process.env.AZURE_SPEECH_REGION,
         speechAvailable: this.speechAvailable,
-        geminiKey: null
+        anthropicKey: null,
+        llmStatus: llmService.getStats()
       };
     }
   }
@@ -1170,29 +1130,38 @@ class ApplicationController {
       // Persist settings to file or config
       this.persistSettings(settings);
 
-      // If user supplied a Gemini key via settings UI, apply it immediately
-      if (settings.geminiKey) {
+      this.applySpeechSettings(settings);
+
+      // Apply an Anthropic key supplied via the settings UI immediately; an
+      // explicitly emptied field clears the override and falls back to .env.
+      if (typeof settings.anthropicKey === 'string') {
         try {
-          llmService.updateApiKey(settings.geminiKey);
+          llmService.updateApiKey(settings.anthropicKey || null);
         } catch (e) {
-          logger.error('Failed to apply Gemini API key from settings', { error: e.message });
-        }
-      }
-      // If user supplied a Gemini service-account path, apply it (persisted and runtime)
-      if (settings.geminiServiceAccount) {
-        try {
-          // Mirror into env so llm.service can pick it up
-          process.env.GEMINI_SERVICE_ACCOUNT = settings.geminiServiceAccount;
-        } catch (e) {
-          logger.error('Failed to apply Gemini service account from settings', { error: e.message });
+          logger.error('Failed to apply Anthropic API key from settings', { error: e.message });
         }
       }
 
-      logger.info("Settings saved successfully", settings);
+      const loggableSettings = Object.assign({}, settings);
+      if (loggableSettings.anthropicKey) loggableSettings.anthropicKey = '***REDACTED***';
+      logger.info("Settings saved successfully", loggableSettings);
       return { success: true };
     } catch (error) {
       logger.error("Failed to save settings", { error: error.message });
       return { success: false, error: error.message };
+    }
+  }
+
+  applySpeechSettings(settings) {
+    try {
+      const status = speechService.updateSettings(settings);
+      this.speechAvailable = speechService.isAvailable();
+      windowManager.broadcastToAllWindows("speech-status", {
+        status: `Speech provider: ${status.provider}`,
+        available: this.speechAvailable
+      });
+    } catch (error) {
+      logger.error("Failed to apply speech settings", { error: error.message });
     }
   }
 
@@ -1218,6 +1187,7 @@ class ApplicationController {
       }
 
       const merged = Object.assign({}, existing, settings);
+      if (settings.anthropicKey === '') delete merged.anthropicKey;
 
       // Ensure directory exists
       try {
@@ -1228,8 +1198,7 @@ class ApplicationController {
 
       // Do not log sensitive values like API keys
       const safeLog = Object.assign({}, settings);
-      if (safeLog.geminiKey) safeLog.geminiKey = '***REDACTED***';
-      if (safeLog.geminiServiceAccount) safeLog.geminiServiceAccount = '***REDACTED***';
+      if (safeLog.anthropicKey) safeLog.anthropicKey = '***REDACTED***';
       logger.debug('Settings persisted to disk', { path: settingsPath, settings: safeLog });
     } catch (error) {
       logger.error('Failed to persist settings', { error: error.message });
@@ -1255,30 +1224,14 @@ class ApplicationController {
       if (persisted.activeSkill) this.activeSkill = persisted.activeSkill;
       if (persisted.appIcon) this.appIcon = persisted.appIcon;
 
-      // If a gemini key was stored, apply it to llmService
-      if (persisted.geminiKey) {
-        try {
-          llmService.updateApiKey(persisted.geminiKey);
-        } catch (e) {
-          logger.error('Failed to apply persisted Gemini key at startup', { error: e.message });
-        }
-      }
+      speechService.updateSettings(persisted);
 
-      // If a gemini service account path was stored, set env and attempt a background connectivity test
-      if (persisted.geminiServiceAccount) {
+      // An env-provided key always wins over a stored one
+      if (persisted.anthropicKey && !config.getApiKey('ANTHROPIC')) {
         try {
-          process.env.GEMINI_SERVICE_ACCOUNT = persisted.geminiServiceAccount;
-          // Run a non-blocking test to warm up token cache (do not block startup)
-          (async () => {
-            try {
-              const test = await llmService.testConnection();
-              logger.debug('Background Gemini service-account test result', { result: test });
-            } catch (e) {
-              logger.debug('Background Gemini test failed', { error: e.message });
-            }
-          })();
+          llmService.updateApiKey(persisted.anthropicKey);
         } catch (e) {
-          logger.error('Failed to apply persisted Gemini service-account at startup', { error: e.message });
+          logger.error('Failed to apply persisted Anthropic key at startup', { error: e.message });
         }
       }
 
