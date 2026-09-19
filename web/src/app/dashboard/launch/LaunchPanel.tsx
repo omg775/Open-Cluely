@@ -59,8 +59,10 @@ export function LaunchPanel({ webBaseUrl, model }: Props) {
       {status === "launched" && deepLink ? (
         <div className="mt-4 rounded-lg border border-[var(--border)] p-4 text-sm">
           <p>
-            Your browser should have asked to open DevinAi. Nothing happened? The app is probably
-            not installed yet — set it up below, then use this link:
+            Your browser should have asked to open DevinAi. Nothing happened, or a blank Electron
+            window opened? Copy this link and run{" "}
+            <code className="font-mono">npm start -- &quot;&lt;link&gt;&quot;</code> in the repo
+            instead — it links the app directly. The link is valid for two minutes.
           </p>
           <code className="mt-2 block truncate rounded bg-black/40 px-3 py-2 font-mono text-xs">
             {deepLink}
