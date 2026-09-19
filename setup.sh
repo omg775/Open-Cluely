@@ -46,13 +46,13 @@ Options:
   -h, --help              Show this help
 
 Environment variables:
-  GEMINI_API_KEY          If provided, writes into .env
+  ANTHROPIC_API_KEY       If provided, writes into .env
   WHISPER_MODEL           Whisper model to configure (default: base)
   WHISPER_LANGUAGE        Whisper language to configure (default: en)
   WHISPER_SEGMENT_MS      Segment size in ms (default: 4000)
 
 Example:
-  GEMINI_API_KEY=your_key_here ./setup.sh --install-system-deps
+  ANTHROPIC_API_KEY=sk-ant-... ./setup.sh --install-system-deps
 EOF
 }
 
@@ -135,25 +135,25 @@ upsert_env() {
   fi
 }
 
-ensure_gemini_key() {
-  if [[ -n "${GEMINI_API_KEY:-}" ]]; then
-    upsert_env "GEMINI_API_KEY" "$GEMINI_API_KEY"
+ensure_anthropic_key() {
+  if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+    upsert_env "ANTHROPIC_API_KEY" "$ANTHROPIC_API_KEY"
   fi
 
-  if ! grep -q '^GEMINI_API_KEY=' .env 2>/dev/null || grep -q 'your_gemini_api_key_here' .env 2>/dev/null; then
+  if ! grep -q '^ANTHROPIC_API_KEY=' .env 2>/dev/null || grep -q 'your-anthropic-api-key-here' .env 2>/dev/null; then
     echo ""
     echo "=========================================="
-    echo " API KEY REQUIRED"
+    echo " ANTHROPIC API KEY REQUIRED"
     echo "=========================================="
     echo ""
-    echo "Add your Gemini API key to .env and rerun this script if needed."
-    echo "Get a key from: https://aistudio.google.com/"
+    echo "Add your Anthropic API key to .env (ANTHROPIC_API_KEY=sk-ant-...)."
+    echo "Create one at: https://console.anthropic.com/settings/keys"
     echo ""
     read -r -p "Press Enter after you've updated .env..."
   fi
 
-  if grep -q 'your_gemini_api_key_here' .env 2>/dev/null; then
-    echo "Error: GEMINI_API_KEY is still not configured in .env"
+  if grep -q 'your-anthropic-api-key-here' .env 2>/dev/null; then
+    echo "Error: ANTHROPIC_API_KEY is still not configured in .env"
     exit 1
   fi
 }
@@ -264,7 +264,7 @@ echo "Node: $(node -v)"
 echo "npm:  $(npm -v)"
 
 ensure_env_file
-ensure_gemini_key
+ensure_anthropic_key
 install_system_deps
 install_node_deps
 setup_whisper_env

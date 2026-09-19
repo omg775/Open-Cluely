@@ -2,15 +2,23 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(process.cwd(), '.env') });
 
+const DEFAULT_MODEL = 'claude-sonnet-4-5';
+
 const defaults = {
   llm: {
-    gemini: {
-      model: process.env.GEMINI_MODEL || process.env.GEMINI_MODEL_NAME || 'gemini-pro',
-      timeout: Number(process.env.GEMINI_TIMEOUT || process.env.LLM_TIMEOUT || 10000),
-      maxRetries: Number(process.env.GEMINI_MAX_RETRIES || process.env.LLM_MAX_RETRIES || 3),
-      enableFallbackMethod: (process.env.GEMINI_ENABLE_FALLBACK === 'true') || false,
-      fallbackEnabled: (process.env.GEMINI_FALLBACK_ENABLED === 'true') || false,
-      generation: undefined
+    provider: 'anthropic',
+    anthropic: {
+      model: process.env.ANTHROPIC_MODEL || DEFAULT_MODEL,
+      maxTokens: Number(process.env.ANTHROPIC_MAX_TOKENS || 4096),
+      temperature: Number(process.env.ANTHROPIC_TEMPERATURE || 0.7),
+      timeout: Number(process.env.ANTHROPIC_TIMEOUT || process.env.LLM_TIMEOUT || 60000),
+      maxRetries: Number(process.env.ANTHROPIC_MAX_RETRIES || process.env.LLM_MAX_RETRIES || 2),
+      streaming: process.env.ANTHROPIC_STREAMING !== 'false',
+      // Minimum gap between two outgoing requests; extra requests are coalesced.
+      minRequestIntervalMs: Number(process.env.LLM_MIN_REQUEST_INTERVAL_MS || 1200),
+      // Quiet period before a transcript chunk is sent for reasoning.
+      transcriptDebounceMs: Number(process.env.LLM_TRANSCRIPT_DEBOUNCE_MS || 900),
+      maxHistoryTurns: Number(process.env.LLM_MAX_HISTORY_TURNS || 15)
     }
   },
 
@@ -30,7 +38,7 @@ const defaults = {
     isDevelopment: process.env.NODE_ENV !== 'production'
   },
 
-  stealth: {
+  overlay: {
     hideFromDock: true,
     noAttachConsole: true,
     disguiseProcess: true
@@ -54,22 +62,15 @@ function get(pathKey, defaultValue) {
 
 // Return the raw environment API key for the given service.
 // Accept any non-empty string; do not enforce prefix/regex rules.
-function getApiKey(serviceName) {
-  if (!serviceName || typeof serviceName !== 'string') return null;
-  const base = String(serviceName).toUpperCase();
+function getApiKey(serviceName = 'ANTHROPIC') {
+  const base = String(serviceName || 'ANTHROPIC').toUpperCase();
 
-  // Common environment variable name patterns to try
   const candidates = [
     `${base}_API_KEY`,
     `${base}_KEY`,
     `${base}_TOKEN`,
-    `${base}_APIKEY`,
-    `${base}_SECRET`,
-    base,
-    // generic fallbacks that might be present in environments
-    'GEMINI_API_KEY',
-    'API_KEY',
-    'OPENAI_API_KEY'
+    'ANTHROPIC_API_KEY',
+    'CLAUDE_API_KEY'
   ];
 
   for (const name of candidates) {
@@ -84,5 +85,6 @@ function getApiKey(serviceName) {
 
 module.exports = {
   get,
-  getApiKey
+  getApiKey,
+  DEFAULT_MODEL
 };

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenCluely — Invisible AI Interview Copilot</title>
+    <title>OpenCluely — Live-Context AI Overlay</title>
     <link rel="stylesheet" href="style.css">
     <!-- Font Awesome for sharp minimal icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -45,10 +45,10 @@
                 <div class="status-tag">
                     <span class="pulse-dot"></span> Under Active Development
                 </div>
-                <h1>Invisible AI Interview Copilot</h1>
+                <h1>Live-Context AI Overlay</h1>
                 <p class="hero-subtitle">
-                    A revolutionary desktop application providing real-time, completely stealth assistance during technical rounds. 
-                    100% free and open-source.
+                    A desktop assistant for calls, meetings, and research: it reads your screen or the conversation and
+                    answers in a small overlay that stays out of your way. Free and open-source.
                 </p>
                 <div class="hero-actions">
                     <a href="https://github.com/TechyCSR/OpenCluely" target="_blank" class="btn btn-white">
@@ -57,8 +57,8 @@
                     <a href="#install" class="btn btn-outline">Quick Setup</a>
                 </div>
                 <div class="hero-badges">
-                    <span><i class="fas fa-shield-halved"></i> 100% Invisible</span>
-                    <span><i class="fas fa-microchip"></i> Gemini Powered</span>
+                    <span><i class="fas fa-shield-halved"></i> Local &amp; Private</span>
+                    <span><i class="fas fa-microchip"></i> Claude Powered</span>
                     <span><i class="fas fa-desktop"></i> Cross-Platform</span>
                 </div>
             </div>
@@ -108,8 +108,8 @@
     <!-- Demo Section -->
     <section id="demo" class="section">
         <div class="container">
-            <h2 class="section-title"><i class="fas fa-clapperboard"></i> Witness Stealth in Action</h2>
-            <p class="section-subtitle">See how OpenCluely operates fully transparently in real-time desktop capture.</p>
+            <h2 class="section-title"><i class="fas fa-clapperboard"></i> See It In Action</h2>
+            <p class="section-subtitle">Capture the screen, ask a question, and read the streamed answer in the overlay.</p>
             <div class="video-wrapper">
                 <div class="video-container">
                     <video controls muted autoplay loop>
@@ -124,22 +124,22 @@
     <!-- Features Section -->
     <section id="features" class="section section-border">
         <div class="container">
-            <h2 class="section-title"><i class="fas fa-shield-halved"></i> Built For Unmatched Stealth</h2>
+            <h2 class="section-title"><i class="fas fa-shield-halved"></i> Built To Stay Out Of The Way</h2>
             <div class="features-grid">
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="fas fa-ghost"></i></div>
-                    <h3>100% Invisible Mode</h3>
-                    <p>Completely invisible to video conferencing apps like Zoom, Teams, Meet, and Discord. Bypasses recording and streaming software with programmatic transparent screen overlays.</p>
+                    <div class="feature-icon"><i class="fas fa-feather"></i></div>
+                    <h3>Low-Profile Overlay</h3>
+                    <p>A compact, always-on-top, click-through panel that you can hide with one shortcut, so it never covers the thing you are actually working on.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-bolt"></i></div>
                     <h3>Direct Image Analysis</h3>
-                    <p>Skip slow OCR models. OpenCluely passes desktop viewport crops and screenshots directly to Google Gemini for real-time visual reasoning and problem-solving.</p>
+                    <p>Skip slow OCR models. OpenCluely passes desktop viewport crops and screenshots directly to Claude for real-time visual reasoning, and streams the answer back as it is generated.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-microphone-lines"></i></div>
                     <h3>Seamless Voice Commands</h3>
-                    <p>Integrate with Azure Speech services or local OpenAI Whisper models to automatically record, transcribe, and respond to verbal interviewer questions on the fly.</p>
+                    <p>Integrate with Azure Speech or a local Whisper model to transcribe what is being said and get summaries, answers, or follow-up questions as the conversation moves.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-brain"></i></div>
@@ -216,8 +216,8 @@
                 </div>
                 <div class="step-card">
                     <div class="step-num">02</div>
-                    <h3>Gemini Credentials</h3>
-                    <p>Grab a free API Key from <a href="https://aistudio.google.com/" target="_blank" class="text-link">Google AI Studio</a> to power the intelligence.</p>
+                    <h3>Anthropic Credentials</h3>
+                    <p>Create an API key in the <a href="https://console.anthropic.com/settings/keys" target="_blank" class="text-link">Anthropic Console</a> and put it in <code>.env</code> as <code>ANTHROPIC_API_KEY</code>.</p>
                 </div>
                 <div class="step-card">
                     <div class="step-num">03</div>

@@ -401,6 +401,31 @@
             transition: background 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
         }
         .copy-btn:hover { background: rgba(0,0,0,0.7); }
+        .error-state {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 10px 14px;
+            font-size: 12px;
+            line-height: 1.45;
+            color: rgba(255,255,255,0.82);
+        }
+        .error-state.hidden { display: none; }
+        .error-dot {
+            flex: 0 0 auto;
+            width: 6px;
+            height: 6px;
+            margin-top: 6px;
+            border-radius: 50%;
+            background: rgba(255,138,128,0.9);
+        }
+        .error-message { word-break: break-word; }
+        .markdown-content.streaming::after {
+            content: '▍';
+            opacity: 0.55;
+            animation: caret 1s steps(2) infinite;
+        }
+        @keyframes caret { 50% { opacity: 0; } }
         .copy-btn.copied { 
             background: rgba(76,175,80,0.85); 
             border-color: rgba(76,175,80,0.95); 
@@ -428,6 +453,12 @@
                     <div class="bouncing-dot"></div>
                 </div>
             </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="error-state hidden">
+            <span class="error-dot"></span>
+            <span id="error-message" class="error-message"></span>
         </div>
 
         <!-- Response Content -->
@@ -466,6 +497,9 @@
         let isInteractive = false;
         let scrollableElements = [];
         let initialized = false;
+        let activeStreamId = null;
+        let streamBuffer = '';
+        let streamRenderQueued = false;
         
         // Immediate logging to verify script execution
         console.log('[LLM-RESPONSE] Script tag executed');
@@ -523,6 +557,27 @@
                     console.log('[LLM-RESPONSE] show-loading received');
                     showLoadingState();
                 });
+
+                if (window.electronAPI.onLlmStreamStart) {
+                    window.electronAPI.onLlmStreamStart((event, data) => {
+                        const payload = data || event;
+                        beginStream(payload?.streamId);
+                    });
+                }
+
+                if (window.electronAPI.onLlmStreamDelta) {
+                    window.electronAPI.onLlmStreamDelta((event, data) => {
+                        const payload = data || event;
+                        appendStreamContent(payload?.streamId, payload?.content);
+                    });
+                }
+
+                if (window.electronAPI.onDisplayLlmError) {
+                    window.electronAPI.onDisplayLlmError((event, data) => {
+                        const payload = data || event;
+                        showErrorState(payload?.error);
+                    });
+                }
                 
                 // Listen for LLM response
                 window.electronAPI.onDisplayLlmResponse(function() {
@@ -550,6 +605,7 @@
                         }
                         
                         hideLoadingState();
+                        endStream();
                         displayResponse(actualData);
                         setupScrolling();
                         setTimeout(verifyDisplayState, 500);
@@ -566,9 +622,79 @@
             }
         } // end initLLMResponseWindow
 
+        /**
+         * Streaming: tokens render as plain markdown in the full-width panel,
+         * and the final display-llm-response re-renders with the split layout.
+         */
+        function beginStream(streamId) {
+            activeStreamId = streamId ?? null;
+            hideErrorState();
+            hideLoadingState();
+
+            const responseElement = document.getElementById('response-content');
+            const splitLayout = document.getElementById('split-layout');
+            const fullContent = document.getElementById('full-content');
+            const fullMarkdown = document.getElementById('full-markdown');
+
+            if (responseElement) responseElement.classList.remove('hidden');
+            if (splitLayout) splitLayout.classList.add('hidden');
+            if (fullContent) fullContent.classList.remove('hidden');
+            if (fullMarkdown) {
+                fullMarkdown.innerHTML = '';
+                fullMarkdown.classList.add('streaming');
+            }
+        }
+
+        function appendStreamContent(streamId, content) {
+            // Ignore deltas from a superseded request
+            if (activeStreamId === null || streamId !== activeStreamId) return;
+            if (typeof content !== 'string') return;
+
+            streamBuffer = content;
+            if (streamRenderQueued) return;
+
+            streamRenderQueued = true;
+            requestAnimationFrame(() => {
+                streamRenderQueued = false;
+                const fullMarkdown = document.getElementById('full-markdown');
+                if (!fullMarkdown) return;
+
+                fullMarkdown.innerHTML = renderMarkdown(streamBuffer);
+                const panel = fullMarkdown.closest('.full-content-inner') || fullMarkdown.parentElement;
+                if (panel) panel.scrollTop = panel.scrollHeight;
+            });
+        }
+
+        function endStream() {
+            activeStreamId = null;
+            streamBuffer = '';
+            const fullMarkdown = document.getElementById('full-markdown');
+            if (fullMarkdown) fullMarkdown.classList.remove('streaming');
+        }
+
+        function showErrorState(message) {
+            endStream();
+            hideLoadingState();
+
+            const responseElement = document.getElementById('response-content');
+            const errorElement = document.getElementById('error-state');
+            const errorMessage = document.getElementById('error-message');
+
+            if (responseElement) responseElement.classList.add('hidden');
+            if (errorMessage) errorMessage.textContent = message || 'Something went wrong. Try again.';
+            if (errorElement) errorElement.classList.remove('hidden');
+        }
+
+        function hideErrorState() {
+            const errorElement = document.getElementById('error-state');
+            if (errorElement) errorElement.classList.add('hidden');
+        }
+
         function showLoadingState() {
             const loadingElement = document.getElementById('loading');
             const responseElement = document.getElementById('response-content');
+
+            hideErrorState();
             
             if (loadingElement) {
                 loadingElement.classList.remove('hidden');
@@ -634,6 +760,8 @@
         function displayResponse(data) {
             // Show content
             const responseElement = document.getElementById('response-content');
+
+            hideErrorState();
             
             if (responseElement) {
                 responseElement.classList.remove('hidden');

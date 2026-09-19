@@ -423,35 +423,27 @@
             <div class="settings-section">
                 <div class="settings-section-title">
                     <i class="fas fa-robot"></i>
-                    Gemini Settings
+                    Claude Settings
                 </div>
                 <div class="settings-section-content">
                     <div class="settings-item">
                         <div>
-                            <div class="settings-item-label">Google API Key</div>
-                            <div class="settings-item-description">Your Google API key for Gemini models</div>
+                            <div class="settings-item-label">Anthropic API Key</div>
+                            <div class="settings-item-description">Used for all reasoning. Leave empty to use
+                                <code>ANTHROPIC_API_KEY</code> from <code>.env</code>.</div>
                         </div>
-                        <input type="password" class="input-field" id="geminiKey"
-                            placeholder="Enter your Google API key">
+                        <input type="password" class="input-field" id="anthropicKey"
+                            placeholder="sk-ant-...">
                     </div>
                     <div class="settings-item">
                         <div>
-                            <div class="settings-item-label">Service Account (JSON path)</div>
-                            <div class="settings-item-description">Path to a Google Cloud service-account JSON keyfile
-                                (optional). If set, the app will prefer bearer-token auth over API key.</div>
-                        </div>
-                        <input type="text" class="input-field" id="geminiServiceAccount"
-                            placeholder="e.g. /Users/you/keys/gemini-sa.json">
-                    </div>
-                    <div class="settings-item">
-                        <div>
-                            <div class="settings-item-label">Test Gemini Credentials</div>
-                            <div class="settings-item-description">Quickly test the configured API key or
-                                service-account by contacting the Gemini endpoint.</div>
+                            <div class="settings-item-label">Test Claude Connection</div>
+                            <div class="settings-item-description">Sends a tiny message to the Anthropic API to verify
+                                the key and model.</div>
                         </div>
                         <div style="display:flex; gap:8px; align-items:center;">
-                            <button class="btn" id="testGeminiBtn">Test Credentials</button>
-                            <div id="geminiTestFeedback" style="font-size:12px;color:#ddd;">&nbsp;</div>
+                            <button class="btn" id="testLlmBtn">Test Connection</button>
+                            <div id="llmTestFeedback" style="font-size:12px;color:#ddd;">&nbsp;</div>
                         </div>
                     </div>
                 </div>

@@ -30,10 +30,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendChatMessage: (text) => ipcRenderer.invoke('send-chat-message', text),
   getSkillPrompt: (skillName) => ipcRenderer.invoke('get-skill-prompt', skillName),
   
-  // Gemini LLM configuration
-  setGeminiApiKey: (apiKey) => ipcRenderer.invoke('set-gemini-api-key', apiKey),
-  getGeminiStatus: () => ipcRenderer.invoke('get-gemini-status'),
-  testGeminiConnection: () => ipcRenderer.invoke('test-gemini-connection'),
+  // Claude (Anthropic) configuration
+  setLlmApiKey: (apiKey) => ipcRenderer.invoke('set-llm-api-key', apiKey),
+  getLlmStatus: () => ipcRenderer.invoke('get-llm-status'),
+  testLlmConnection: () => ipcRenderer.invoke('test-llm-connection'),
+  runLlmDiagnostics: () => ipcRenderer.invoke('run-llm-diagnostics'),
   
   // Settings
   showSettings: () => ipcRenderer.invoke('show-settings'),
@@ -83,8 +84,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onLlmResponse: (callback) => ipcRenderer.on('llm-response', callback),
   onLlmError: (callback) => ipcRenderer.on('llm-error', callback),
   onTranscriptionLlmResponse: (callback) => ipcRenderer.on('transcription-llm-response', callback),
-  onOpenGeminiConfig: (callback) => ipcRenderer.on('open-gemini-config', callback),
+  onOpenLlmConfig: (callback) => ipcRenderer.on('open-llm-config', callback),
   onDisplayLlmResponse: (callback) => ipcRenderer.on('display-llm-response', callback),
+  onDisplayLlmError: (callback) => ipcRenderer.on('display-llm-error', callback),
+  onLlmStreamStart: (callback) => ipcRenderer.on('llm-stream-start', callback),
+  onLlmStreamDelta: (callback) => ipcRenderer.on('llm-stream-delta', callback),
   onShowLoading: (callback) => ipcRenderer.on('show-loading', callback),
   onSkillChanged: (callback) => ipcRenderer.on('skill-changed', callback),
   onInteractionModeChanged: (callback) => ipcRenderer.on('interaction-mode-changed', callback),

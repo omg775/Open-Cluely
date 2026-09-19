@@ -13,10 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const whisperModelInput = document.getElementById('whisperModel');
     const whisperLanguageInput = document.getElementById('whisperLanguage');
     const whisperSegmentMsInput = document.getElementById('whisperSegmentMs');
-    const geminiKeyInput = document.getElementById('geminiKey');
-    const geminiServiceAccountInput = document.getElementById('geminiServiceAccount');
-    const testGeminiBtn = document.getElementById('testGeminiBtn');
-    const geminiTestFeedback = document.getElementById('geminiTestFeedback');
+    const anthropicKeyInput = document.getElementById('anthropicKey');
+    const testLlmBtn = document.getElementById('testLlmBtn');
+    const llmTestFeedback = document.getElementById('llmTestFeedback');
     const windowGapInput = document.getElementById('windowGap');
     const codingLanguageSelect = document.getElementById('codingLanguage');
     const activeSkillSelect = document.getElementById('activeSkill');
@@ -81,8 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (settings.whisperModel && whisperModelInput) whisperModelInput.value = settings.whisperModel;
         if (settings.whisperLanguage && whisperLanguageInput) whisperLanguageInput.value = settings.whisperLanguage;
         if (settings.whisperSegmentMs && whisperSegmentMsInput) whisperSegmentMsInput.value = settings.whisperSegmentMs;
-        if (settings.geminiKey && geminiKeyInput) geminiKeyInput.value = settings.geminiKey;
-        if (settings.geminiServiceAccount && geminiServiceAccountInput) geminiServiceAccountInput.value = settings.geminiServiceAccount;
+        if (settings.anthropicKey && anthropicKeyInput) anthropicKeyInput.value = settings.anthropicKey;
         if (settings.windowGap && windowGapInput) windowGapInput.value = settings.windowGap;
 
         // Set C++ as default if no coding language is specified
@@ -138,8 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (whisperModelInput) settings.whisperModel = whisperModelInput.value;
         if (whisperLanguageInput) settings.whisperLanguage = whisperLanguageInput.value;
         if (whisperSegmentMsInput) settings.whisperSegmentMs = whisperSegmentMsInput.value;
-        if (geminiKeyInput) settings.geminiKey = geminiKeyInput.value;
-        if (geminiServiceAccountInput) settings.geminiServiceAccount = geminiServiceAccountInput.value;
+        if (anthropicKeyInput && anthropicKeyInput.value) settings.anthropicKey = anthropicKeyInput.value;
         if (windowGapInput) settings.windowGap = windowGapInput.value;
         if (codingLanguageSelect) settings.codingLanguage = codingLanguageSelect.value;
         if (activeSkillSelect) settings.activeSkill = activeSkillSelect.value;
@@ -170,8 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
         whisperModelInput,
         whisperLanguageInput,
         whisperSegmentMsInput,
-        geminiKeyInput,
-        geminiServiceAccountInput,
+        anthropicKeyInput,
         windowGapInput
     ];
 
@@ -182,20 +178,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    if (testGeminiBtn) {
-        testGeminiBtn.addEventListener('click', async () => {
-            if (geminiTestFeedback) geminiTestFeedback.textContent = 'Testing...';
+    if (testLlmBtn) {
+        testLlmBtn.addEventListener('click', async () => {
+            if (llmTestFeedback) llmTestFeedback.textContent = 'Testing...';
             try {
-                const result = await window.electronAPI.testGeminiConnection();
+                const result = await window.electronAPI.testLlmConnection();
                 if (result && result.success) {
-                    if (geminiTestFeedback) geminiTestFeedback.textContent = 'Success — connection OK';
+                    if (llmTestFeedback) llmTestFeedback.textContent = `Connected — ${result.model || 'Claude'}`;
                 } else {
-                    if (geminiTestFeedback) geminiTestFeedback.textContent = `Failed: ${result?.error || JSON.stringify(result)}`;
+                    if (llmTestFeedback) llmTestFeedback.textContent = `Failed: ${result?.error || 'unknown error'}`;
                 }
             } catch (e) {
-                if (geminiTestFeedback) geminiTestFeedback.textContent = `Error: ${e.message}`;
+                if (llmTestFeedback) llmTestFeedback.textContent = `Error: ${e.message}`;
             }
-            setTimeout(() => { if (geminiTestFeedback) geminiTestFeedback.textContent = ' '; }, 5000);
+            setTimeout(() => { if (llmTestFeedback) llmTestFeedback.textContent = ' '; }, 5000);
         });
     }
 
