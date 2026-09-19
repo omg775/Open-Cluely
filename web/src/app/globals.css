@@ -65,9 +65,25 @@ body {
 
 .hero-wash {
   background:
-    radial-gradient(90% 60% at 50% -5%, #fbeedd 0%, rgba(251, 238, 221, 0) 70%),
-    radial-gradient(55% 45% at 88% 18%, #f6e2ca 0%, rgba(246, 226, 202, 0) 70%),
+    linear-gradient(180deg, rgba(239, 236, 228, 0.3) 0%, rgba(239, 236, 228, 0.62) 55%, var(--paper) 100%),
+    url("/img/glow-hero.jpg") center top / cover no-repeat,
     var(--paper);
+}
+
+/* Ambient warmth behind the mid page, so sections don't sit on flat paper. */
+.wash-soft {
+  background:
+    radial-gradient(70% 50% at 12% 0%, #f7e6d0 0%, rgba(247, 230, 208, 0) 65%),
+    radial-gradient(60% 45% at 92% 75%, #f3e3d6 0%, rgba(243, 227, 214, 0) 70%),
+    var(--paper);
+}
+
+.band-dark {
+  background:
+    linear-gradient(180deg, rgba(12, 11, 10, 0.72) 0%, rgba(12, 11, 10, 0.88) 100%),
+    url("/img/glow-dark.jpg") center / cover no-repeat,
+    #0c0b0a;
+  color: var(--surface);
 }
 
 /* The one dark surface: the session itself. */

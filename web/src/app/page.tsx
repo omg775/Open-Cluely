@@ -171,11 +171,11 @@ export default async function LandingPage() {
         <section className="hero-wash">
           <div className="mx-auto w-full max-w-5xl px-6 pb-24 pt-24 text-center sm:pb-36 sm:pt-32">
             <h1 className="mx-auto max-w-[17ch] text-[2.9rem] font-extrabold leading-[0.93] tracking-[-0.04em] text-balance sm:text-[4.9rem]">
-              Undetectable AI for meetings.
+              Never get caught slipping on a call.
             </h1>
             <p className="mx-auto mt-7 max-w-[46ch] text-lg leading-relaxed text-[var(--graphite)]">
-              DevinAi listens to your meeting, reads your screen, and streams grounded answers back
-              — invisible to screen share, storing nothing.
+              Undetectable AI for meetings. DevinAi hears the question, reads your screen and feeds
+              you the answer before the silence gets weird.
             </p>
             <div className="mt-9 flex flex-wrap justify-center gap-3">
               <Link href={session ? "/dashboard" : "/signup"} className="btn btn-primary px-7 py-3.5">
@@ -193,7 +193,8 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        <section id="how-it-helps" className="mx-auto w-full max-w-6xl px-6 py-28 sm:py-36">
+        <section id="how-it-helps" className="wash-soft">
+          <div className="mx-auto w-full max-w-6xl px-6 py-28 sm:py-36">
           <h2 className="max-w-[20ch] text-4xl font-bold tracking-[-0.03em] sm:text-[3.25rem]">
             How DevinAi helps during a call
           </h2>
@@ -257,6 +258,7 @@ export default async function LandingPage() {
               </li>
             ))}
           </ul>
+          </div>
         </section>
 
         <section
@@ -282,12 +284,12 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        <section className="hero-wash">
+        <section className="band-dark">
           <div className="mx-auto w-full max-w-5xl px-6 py-32 text-center sm:py-40">
             <h2 className="mx-auto max-w-[20ch] text-4xl font-bold tracking-[-0.03em] sm:text-[3.5rem]">
-              Ready for your next call?
+              Your next call starts soon.
             </h2>
-            <p className="mt-5 text-lg text-[var(--graphite)]">
+            <p className="mt-5 text-lg text-[var(--surface)]/65">
               Sign up and launch it in the same tab.
             </p>
             <Link
