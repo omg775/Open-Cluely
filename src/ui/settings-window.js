@@ -12,7 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const whisperCommandInput = document.getElementById('whisperCommand');
     const whisperModelInput = document.getElementById('whisperModel');
     const whisperLanguageInput = document.getElementById('whisperLanguage');
-    const whisperSegmentMsInput = document.getElementById('whisperSegmentMs');
+    const endpointSilenceMsInput = document.getElementById('endpointSilenceMs');
+    const audioSourceSelect = document.getElementById('audioSource');
+    const audioDeviceInput = document.getElementById('audioDevice');
     const anthropicKeyInput = document.getElementById('anthropicKey');
     const testLlmBtn = document.getElementById('testLlmBtn');
     const llmTestFeedback = document.getElementById('llmTestFeedback');
@@ -79,7 +81,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (settings.whisperCommand && whisperCommandInput) whisperCommandInput.value = settings.whisperCommand;
         if (settings.whisperModel && whisperModelInput) whisperModelInput.value = settings.whisperModel;
         if (settings.whisperLanguage && whisperLanguageInput) whisperLanguageInput.value = settings.whisperLanguage;
-        if (settings.whisperSegmentMs && whisperSegmentMsInput) whisperSegmentMsInput.value = settings.whisperSegmentMs;
+        if (settings.endpointSilenceMs && endpointSilenceMsInput) endpointSilenceMsInput.value = settings.endpointSilenceMs;
+        if (settings.audioSource && audioSourceSelect) audioSourceSelect.value = settings.audioSource;
+        if (settings.audioDevice && audioDeviceInput) audioDeviceInput.value = settings.audioDevice;
         if (settings.anthropicKey && anthropicKeyInput) anthropicKeyInput.value = settings.anthropicKey;
         if (settings.windowGap && windowGapInput) windowGapInput.value = settings.windowGap;
 
@@ -135,7 +139,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (whisperCommandInput) settings.whisperCommand = whisperCommandInput.value;
         if (whisperModelInput) settings.whisperModel = whisperModelInput.value;
         if (whisperLanguageInput) settings.whisperLanguage = whisperLanguageInput.value;
-        if (whisperSegmentMsInput) settings.whisperSegmentMs = whisperSegmentMsInput.value;
+        if (endpointSilenceMsInput) settings.endpointSilenceMs = endpointSilenceMsInput.value;
+        if (audioSourceSelect) settings.audioSource = audioSourceSelect.value;
+        if (audioDeviceInput) settings.audioDevice = audioDeviceInput.value.trim();
         if (anthropicKeyInput) settings.anthropicKey = anthropicKeyInput.value.trim();
         if (windowGapInput) settings.windowGap = windowGapInput.value;
         if (codingLanguageSelect) settings.codingLanguage = codingLanguageSelect.value;
@@ -145,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateSpeechFieldStates = () => {
-        const provider = speechProviderSelect ? speechProviderSelect.value : 'azure';
+        const provider = speechProviderSelect ? speechProviderSelect.value : 'whisper';
         const azureDisabled = provider !== 'azure';
         const whisperDisabled = provider !== 'whisper';
 
@@ -153,7 +159,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (input) input.disabled = azureDisabled;
         });
 
-        [whisperCommandInput, whisperModelInput, whisperLanguageInput, whisperSegmentMsInput].forEach(input => {
+        [whisperCommandInput, whisperModelInput, whisperLanguageInput, endpointSilenceMsInput].forEach(input => {
+            if (input) input.disabled = whisperDisabled;
+        });
+
+        // Audio source/device drive the local capture pipeline only.
+        [audioSourceSelect, audioDeviceInput].forEach(input => {
             if (input) input.disabled = whisperDisabled;
         });
     };
@@ -166,7 +177,9 @@ document.addEventListener('DOMContentLoaded', () => {
         whisperCommandInput,
         whisperModelInput,
         whisperLanguageInput,
-        whisperSegmentMsInput,
+        endpointSilenceMsInput,
+        audioSourceSelect,
+        audioDeviceInput,
         anthropicKeyInput,
         windowGapInput
     ];

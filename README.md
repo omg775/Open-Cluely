@@ -34,7 +34,7 @@ OpenCluely is a cross-platform Electron app for keeping an AI assistant one keys
 
 - Screen capture with image-based analysis
 - Conversation with Claude, streamed into the overlay as it is generated
-- Optional speech-to-text (Azure Speech or local Whisper)
+- Live speech-to-text of your mic and the other side of a call, free and on-device via whisper.cpp (Azure Speech optional)
 - A floating, always-on-top overlay UI
 - Session-based context memory
 
@@ -46,7 +46,7 @@ Use it for meeting notes and follow-ups, live summarisation of a discussion, res
 
 - Node.js 18+ (20+ recommended) and npm
 - An Anthropic API key
-- Optional, for speech input: an Azure Speech key, or a local Whisper install plus `sox`
+- For speech input: `ffmpeg`, plus either whisper.cpp (free, offline — `./setup.sh` builds it) or an Azure Speech key
 
 ---
 
@@ -63,7 +63,7 @@ cp env.example .env
 npm start
 ```
 
-`./setup.sh` does the same thing interactively and can additionally install audio dependencies and set up a local Whisper environment (`./setup.sh --help` for options).
+`./setup.sh --install-system-deps` does the same thing interactively and additionally installs `ffmpeg`, builds whisper.cpp, downloads a model and points `.env` at them (`./setup.sh --help` for options).
 
 Nothing but `ANTHROPIC_API_KEY` is required to get the screenshot and chat flows working. Speech input stays off until you configure a provider.
 
@@ -80,9 +80,25 @@ You can also paste the key into Settings (`Cmd/Ctrl+,`) at runtime; the `.env` v
 | `ANTHROPIC_TIMEOUT` | `60000` | Per-request timeout in ms. |
 | `LLM_MIN_REQUEST_INTERVAL_MS` | `1200` | Floor between outgoing requests. |
 | `LLM_TRANSCRIPT_DEBOUNCE_MS` | `900` | Pause before a transcript burst is sent as one request. |
-| `SPEECH_PROVIDER` | `azure` | `azure` or `whisper`; speech input is optional. |
+| `SPEECH_PROVIDER` | `whisper` | `whisper` (free, local) or `azure`. |
+| `SPEECH_AUDIO_SOURCE` | `both` | `both`, `system` (far end of the call only) or `microphone`. |
+| `SPEECH_AUDIO_DEVICE` | — | Explicit ffmpeg input, e.g. `pulse:…monitor`, `dshow:audio=CABLE Output`, `avfoundation::2`. |
+| `WHISPER_MODEL` | `base.en` | `tiny.en` transcribes in about a second; `base.en` is more accurate and roughly twice as slow. |
+| `SPEECH_ENDPOINT_SILENCE_MS` | `600` | Silence that ends an utterance and triggers a response. |
 
 The default is Sonnet 4.5 because overlay responsiveness matters more than peak reasoning here; Opus is a one-line change in `.env`.
+
+### Hearing the other side of a call
+
+Microphone capture works out of the box. Capturing what you *hear* needs an OS-level loopback source, which the app auto-detects:
+
+- **Linux** — any PulseAudio/PipeWire `.monitor` source (`pactl list short sources`).
+- **macOS** — a virtual output device such as [BlackHole](https://github.com/ExistentialAudio/BlackHole) (free); route the call app's output to it.
+- **Windows** — enable *Stereo Mix* in Sound settings, or install VB-Cable / VoiceMeeter.
+
+With no loopback device, `SPEECH_AUDIO_SOURCE=both` falls back to microphone-only and says so in the overlay status; `system` reports what to install. Settings → Test Connection prints which source was detected.
+
+Audio never leaves the machine when using local Whisper: ffmpeg captures 16 kHz mono PCM, an energy-based voice-activity detector cuts it at each pause, whisper.cpp transcribes the utterance locally, and only the resulting text is sent to Claude. On this machine `tiny.en` returned each utterance about 0.8–1.2 s after the speaker stopped.
 
 ---
 
@@ -105,7 +121,7 @@ The default is Sonnet 4.5 because overlay responsiveness matters more than peak 
 ```text
 Input Layer
  ├── Screenshot Capture
- ├── Voice Input (Azure / Whisper)
+ ├── Voice Input (ffmpeg capture → VAD → whisper.cpp / Azure)
  └── Text Chat
 
         ↓
@@ -123,7 +139,7 @@ UI Layer
  └── Response Panel (loading → streaming → final / error)
 ```
 
-Transcription is a separate step and does not go through Claude: audio is transcribed by Azure or Whisper, and only the resulting text is reasoned over.
+Transcription is a separate step and does not go through Claude: audio is transcribed locally by whisper.cpp (or by Azure), and only the resulting text is reasoned over.
 
 ---
 
@@ -131,5 +147,7 @@ Transcription is a separate step and does not go through Claude: audio is transc
 
 - **"Claude is not configured"** — `ANTHROPIC_API_KEY` is missing from `.env` and no key was set in Settings.
 - **Overlay shows an error line** — the message is the API failure reason (auth, rate limit, timeout, network). Settings → Test Connection isolates credential problems.
-- **No transcription** — speech input needs either `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION`, or a working `whisper` command and `sox`.
+- **No transcription** — run `npm run test-speech`. Local Whisper needs `ffmpeg` on `PATH` (or `FFMPEG_PATH`) and a whisper.cpp binary plus a model in `WHISPER_MODEL_DIR`; Azure needs `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION`.
+- **Only your own voice is transcribed** — no loopback device was found; see "Hearing the other side of a call".
+- **Sentences are cut into fragments** — raise `SPEECH_ENDPOINT_SILENCE_MS`; lower it to get answers sooner.
 - **Screen capture is empty on macOS** — grant Screen Recording permission to the app and restart it.

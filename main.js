@@ -1038,6 +1038,10 @@ class ApplicationController {
     }
     llmService.abortActiveRequest();
 
+    if (typeof speechService.dispose === 'function') {
+      speechService.dispose();
+    }
+
     windowManager.destroyAllWindows();
 
     const sessionStats = sessionManager.getMemoryUsage();

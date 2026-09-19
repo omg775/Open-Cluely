@@ -357,13 +357,38 @@
                     <div class="settings-item">
                         <div>
                             <div class="settings-item-label">Speech Provider</div>
-                            <div class="settings-item-description">Choose Azure Speech or a local OpenAI Whisper CLI
-                            </div>
+                            <div class="settings-item-description">Local Whisper is free and runs offline; Azure
+                                Speech needs a paid key</div>
                         </div>
                         <select class="input-field" id="speechProvider">
+                            <option value="whisper">Local Whisper (free)</option>
                             <option value="azure">Azure Speech</option>
-                            <option value="whisper">Local Whisper</option>
                         </select>
+                    </div>
+                    <div class="settings-item">
+                        <div>
+                            <div class="settings-item-label">Audio Source</div>
+                            <div class="settings-item-description">Capture your mic, the call audio coming out of your
+                                speakers, or both</div>
+                        </div>
+                        <select class="input-field" id="audioSource">
+                            <option value="both">Microphone + call audio</option>
+                            <option value="system">Call audio only</option>
+                            <option value="microphone">Microphone only</option>
+                        </select>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-stack">
+                            <div>
+                                <div class="settings-item-label">Audio Device</div>
+                                <div class="settings-item-description">Optional ffmpeg input override, such as
+                                    <code>pulse:alsa_output.pci-0000_00_1f.3.analog-stereo.monitor</code>,
+                                    <code>dshow:audio=CABLE Output</code> or <code>avfoundation::2</code>
+                                </div>
+                            </div>
+                            <input type="text" class="input-field" id="audioDevice" placeholder="auto-detected"
+                                style="max-width: 100%;">
+                        </div>
                     </div>
                     <div class="settings-item">
                         <div>
@@ -383,8 +408,8 @@
                         <div class="settings-stack">
                             <div>
                                 <div class="settings-item-label">Whisper Command</div>
-                                <div class="settings-item-description">CLI command for local Whisper, such as
-                                    <code>whisper</code> or <code>python3 -m whisper</code></div>
+                                <div class="settings-item-description">Path to <code>whisper-cli</code> or
+                                    <code>whisper-server</code> from whisper.cpp; leave blank to auto-detect</div>
                             </div>
                             <input type="text" class="input-field" id="whisperCommand" placeholder="whisper"
                                 style="max-width: 100%;">
@@ -393,9 +418,10 @@
                     <div class="settings-item">
                         <div>
                             <div class="settings-item-label">Whisper Model</div>
-                            <div class="settings-item-description">Local model name used by the Whisper CLI</div>
+                            <div class="settings-item-description"><code>tiny.en</code> answers in about a second;
+                                <code>base.en</code> is more accurate and roughly twice as slow</div>
                         </div>
-                        <input type="text" class="input-field" id="whisperModel" placeholder="base">
+                        <input type="text" class="input-field" id="whisperModel" placeholder="base.en">
                     </div>
                     <div class="settings-item">
                         <div>
@@ -406,16 +432,20 @@
                     </div>
                     <div class="settings-item">
                         <div>
-                            <div class="settings-item-label">Whisper Segment Length</div>
-                            <div class="settings-item-description">Chunk size in milliseconds for local transcription
-                            </div>
+                            <div class="settings-item-label">End-of-Speech Silence</div>
+                            <div class="settings-item-description">Milliseconds of silence that end an utterance and
+                                trigger a response; lower is faster but splits sentences</div>
                         </div>
-                        <input type="number" class="input-field" id="whisperSegmentMs" placeholder="4000" min="2000"
-                            step="500">
+                        <input type="number" class="input-field" id="endpointSilenceMs" placeholder="600" min="200"
+                            step="100">
                     </div>
                     <div class="settings-note">
-                        Local Whisper runs on this machine and needs a Whisper CLI installed. These settings apply
-                        immediately for the current app session; use <code>.env</code> for startup defaults.
+                        Local Whisper needs <code>ffmpeg</code> and whisper.cpp on this machine — run
+                        <code>./setup.sh</code> to install both. Nothing leaves the machine except the transcript sent
+                        to Claude. Hearing the other side of a call needs an OS loopback source: a PulseAudio/PipeWire
+                        <code>.monitor</code> on Linux, BlackHole on macOS, or Stereo Mix / VB-Cable on Windows.
+                        These settings apply immediately for the current app session; use <code>.env</code> for startup
+                        defaults.
                     </div>
                 </div>
             </div>

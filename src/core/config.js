@@ -24,9 +24,24 @@ const defaults = {
 
   speech: {
     whisper: {
-      model: process.env.WHISPER_MODEL || 'base',
+      // tiny.en answers in about a second; base.en is more accurate but ~2x slower.
+      model: process.env.WHISPER_MODEL || 'base.en',
       language: process.env.WHISPER_LANGUAGE || 'en',
-      segmentMs: Number(process.env.WHISPER_SEGMENT_MS || 4000)
+      modelDir: process.env.WHISPER_MODEL_DIR || '',
+      threads: Number(process.env.WHISPER_THREADS || 0),
+      timeoutMs: Number(process.env.WHISPER_TIMEOUT_MS || 30000)
+    },
+    audio: {
+      // microphone | system (the other side of the call) | both
+      source: process.env.SPEECH_AUDIO_SOURCE || 'both',
+      device: process.env.SPEECH_AUDIO_DEVICE || ''
+    },
+    vad: {
+      silenceThreshold: Number(process.env.SPEECH_SILENCE_THRESHOLD || 0.012),
+      endpointSilenceMs: Number(process.env.SPEECH_ENDPOINT_SILENCE_MS || 600),
+      minUtteranceMs: Number(process.env.SPEECH_MIN_UTTERANCE_MS || 400),
+      maxUtteranceMs: Number(process.env.SPEECH_MAX_UTTERANCE_MS || 12000),
+      preRollMs: Number(process.env.SPEECH_PREROLL_MS || 300)
     },
     azure: {
       language: process.env.AZURE_SPEECH_LANGUAGE || 'en-US'
