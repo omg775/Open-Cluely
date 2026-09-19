@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import type { ActionState } from "@/app/actions/dashboard";
 import { updateAnthropicKey, updateModel, uploadDocument } from "@/app/actions/dashboard";
 
@@ -70,12 +70,25 @@ export function ModelForm({
   models: readonly { id: string; label: string }[];
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(updateModel, INITIAL);
+  // React resets uncontrolled fields when the action returns, which would show
+  // the pre-submit model until the revalidated prop arrives.
+  const [selected, setSelected] = useState(model);
+  const [savedModel, setSavedModel] = useState(model);
+  if (model !== savedModel) {
+    setSavedModel(model);
+    setSelected(model);
+  }
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
       <label className="flex flex-col gap-2 text-sm">
         Model
-        <select className="input" name="model" defaultValue={model}>
+        <select
+          className="input"
+          name="model"
+          value={selected}
+          onChange={event => setSelected(event.target.value)}
+        >
           {models.map((entry) => (
             <option key={entry.id} value={entry.id}>
               {entry.label}

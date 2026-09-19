@@ -27,8 +27,8 @@ export default async function LaunchPage() {
       <div>
         <h1 className="text-2xl font-semibold">Launch assistant</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          OpenCluely is a desktop app — it captures your screen and audio locally and never uploads
-          them.
+          OpenCluely is a desktop app — it captures and transcribes your screen and audio locally,
+          and nothing leaves your machine except the single Claude request that answers you.
         </p>
       </div>
 
