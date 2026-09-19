@@ -1,50 +1,164 @@
 @import "tailwindcss";
 
 :root {
-  --background: #07080b;
-  --foreground: #e9ecf2;
-  --muted: #9aa3b2;
-  --panel: #0e1118;
-  --border: #1d2230;
-  --accent: #7c9cff;
+  --paper: #efece4;
+  --surface: #fbf9f4;
+  --ink: #12110f;
+  --graphite: #6a6760;
+  --rule: #d6d1c5;
+  --signal: #d9822b;
+  --signal-deep: #9c540f;
+  --listening: #f0a04b;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
-  --color-panel: var(--panel);
-  --color-line: var(--border);
-  --color-accent: var(--accent);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+  --color-muted: var(--graphite);
+  --color-panel: var(--surface);
+  --color-line: var(--rule);
+  --color-accent: var(--signal);
+  --font-sans: var(--font-archivo);
+  --font-mono: var(--font-plex-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-archivo), system-ui, sans-serif;
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
+::selection {
+  background: var(--signal);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+/* Instrument surfaces: flat planes separated by rules, not floating cards. */
 .panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+
+/* Large soft planes used for the product-story sections. */
+.card {
+  background: linear-gradient(180deg, #fdfcf9 0%, var(--surface) 100%);
+  border: 1.5px solid var(--ink);
+  border-radius: 26px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 18px 40px -34px rgba(18, 17, 15, 0.55);
+}
+
+.card-warm {
+  background: linear-gradient(168deg, #f8e7cf 0%, #f2d8b4 100%);
+  border: 1.5px solid var(--ink);
+  border-radius: 26px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 18px 40px -34px rgba(120, 74, 20, 0.5);
+}
+
+.hero-wash {
+  background:
+    linear-gradient(180deg, rgba(239, 236, 228, 0.3) 0%, rgba(239, 236, 228, 0.62) 55%, var(--paper) 100%),
+    url("/img/glow-hero.jpg") center top / cover no-repeat,
+    var(--paper);
+}
+
+/* Ambient warmth behind the mid page, so sections don't sit on flat paper. */
+.wash-soft {
+  background:
+    radial-gradient(70% 50% at 12% 0%, #f7e6d0 0%, rgba(247, 230, 208, 0) 65%),
+    radial-gradient(60% 45% at 92% 75%, #f3e3d6 0%, rgba(243, 227, 214, 0) 70%),
+    var(--paper);
+}
+
+.band-dark {
+  background:
+    linear-gradient(180deg, rgba(12, 11, 10, 0.72) 0%, rgba(12, 11, 10, 0.88) 100%),
+    url("/img/glow-dark.jpg") center / cover no-repeat,
+    #0c0b0a;
+  color: var(--surface);
+}
+
+/* The one dark surface: the session itself. */
+.plane-dark {
+  background: linear-gradient(180deg, #1b1a17 0%, #0e0d0c 100%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: var(--surface);
+  overflow: hidden;
+}
+
+.plane-dark-lifted {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.07) inset,
+    0 40px 80px -48px rgba(18, 17, 15, 0.85);
+}
+
+/* Photographic screens sit in a thin frame so they read as a device, not a bleed. */
+.screen-frame {
+  border: 1px solid var(--rule);
+  background: #0e0d0c;
+  box-shadow: 0 30px 60px -44px rgba(18, 17, 15, 0.7);
+}
+
+.plane-dark {
+  box-shadow: 0 24px 48px -34px rgba(18, 17, 15, 0.8);
+}
+
+.pulse-dot {
+  background: var(--listening);
+  box-shadow: 0 0 0 3px rgba(240, 160, 75, 0.18);
+}
+
+.readout {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.73rem;
+  line-height: 1.5;
+  letter-spacing: 0.015em;
+  color: var(--graphite);
 }
 
 .input {
   width: 100%;
-  background: #0a0d14;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 0.6rem 0.75rem;
-  color: var(--foreground);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 0.65rem 0.75rem;
+  color: var(--ink);
   font-size: 0.9rem;
+}
+
+.input::placeholder {
+  color: var(--graphite);
 }
 
 .input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--signal);
+  box-shadow: inset 0 0 0 1px var(--signal);
+}
+
+/* Step markers and other counters read as instrument index numbers. */
+.marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  background: var(--listening);
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 2px 2px 0 var(--ink);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .btn {
@@ -52,31 +166,127 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border-radius: 0.5rem;
-  padding: 0.6rem 1rem;
-  font-size: 0.9rem;
-  font-weight: 500;
+  border-radius: 999px;
+  padding: 0.6rem 1.15rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: opacity 120ms ease;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease,
+    box-shadow 140ms ease, transform 140ms ease;
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
 .btn-primary {
-  background: var(--accent);
-  color: #0a0d14;
+  background: linear-gradient(180deg, #e2913a 0%, var(--signal) 100%);
+  color: var(--ink);
+  border-color: var(--ink);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 3px 3px 0 var(--ink);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #f0a04b 0%, #e2913a 100%);
+  transform: translate(-1px, -1px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 5px 5px 0 var(--ink);
 }
 
 .btn-secondary {
-  background: transparent;
-  border-color: var(--border);
-  color: var(--foreground);
+  background: #ffffff;
+  border-color: var(--ink);
+  color: var(--ink);
+  box-shadow: 3px 3px 0 rgba(18, 17, 15, 0.16);
 }
 
-.btn-secondary:hover {
-  border-color: var(--accent);
+.btn-secondary:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 rgba(18, 17, 15, 0.22);
+}
+
+/* Hand-cut sticker: an eyebrow that reads as something stuck onto the page. */
+.sticker {
+  display: inline-block;
+  rotate: -1.5deg;
+  background: #fff6e6;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  padding: 0.4rem 1rem;
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  box-shadow: 3px 3px 0 rgba(18, 17, 15, 0.14);
+}
+
+/* Cartoon spot illustrations sit in a wonky inked circle. */
+.spot {
+  width: 168px;
+  height: 168px;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  border-radius: 58% 42% 46% 54% / 48% 54% 46% 52%;
+  background: #f7f1e6;
+  box-shadow: 5px 5px 0 rgba(18, 17, 15, 0.12);
+  transition: rotate 180ms ease;
+}
+
+.spot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  scale: 1.06;
+}
+
+.spot:hover {
+  rotate: 0deg !important;
+}
+
+/* The one orchestrated motion moment: the hero plays a single session. */
+@keyframes trace {
+  from {
+    transform: scaleY(0.18);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.bar {
+  transform-origin: center;
+  animation: trace 900ms ease-in-out infinite alternate;
+}
+
+@keyframes type-in {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.stream {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  animation: type-in 1400ms steps(48, end) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn:hover:not(:disabled) {
+    transform: none;
+  }
+  .spot {
+    transition: none;
+  }
+  .bar,
+  .stream {
+    animation: none;
+  }
+  .stream {
+    width: 100%;
+  }
 }
