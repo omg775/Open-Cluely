@@ -45,7 +45,7 @@ Use it for meeting notes and follow-ups, live summarisation of a discussion, res
 ## Requirements
 
 - Node.js 18+ (20+ recommended) and npm
-- An Anthropic API key
+- An account on the dashboard to link the app to (or an Anthropic API key, to run it standalone)
 - For speech input: `ffmpeg`, plus either whisper.cpp (free, offline — `./setup.sh` builds it) or an Azure Speech key
 
 ---
@@ -58,22 +58,19 @@ cd Open-Cluely
 npm install
 
 cp env.example .env
-# edit .env and set ANTHROPIC_API_KEY=sk-ant-...
 
 npm start
 ```
 
 `./setup.sh --install-system-deps` does the same thing interactively and additionally installs `ffmpeg`, builds whisper.cpp, downloads a model and points `.env` at them (`./setup.sh --help` for options).
 
-Nothing but `ANTHROPIC_API_KEY` is required to get the screenshot and chat flows working. Speech input stays off until you configure a provider.
-
-You can also paste the key into Settings (`Cmd/Ctrl+,`) at runtime; the `.env` value always wins on startup.
+No API key is needed locally: open the dashboard, click **Launch assistant**, and the app is linked through `opencluely://` — the server holds the key. Setting `ANTHROPIC_API_KEY` in `.env` runs the app standalone instead, and takes precedence over a linked account. Speech input stays off until you configure a provider.
 
 ### Configuration
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | — | Required. Used for all reasoning. |
+| `ANTHROPIC_API_KEY` | — | Optional. Runs the app standalone instead of through a linked account. |
 | `ANTHROPIC_MODEL` | `claude-sonnet-4-5` | Set to `claude-opus-4-5` for deeper answers at higher latency. |
 | `ANTHROPIC_STREAMING` | `true` | Stream tokens into the overlay as they arrive. |
 | `ANTHROPIC_MAX_TOKENS` | `4096` | Response cap. |
