@@ -4,26 +4,35 @@ import { getSession } from "@/lib/session";
 
 const TRAITS = [
   {
-    lead: "Nothing is stored.",
-    body: "Screen and speech leave your machine only to answer one question.",
+    lead: "Zero receipts.",
+    body: "Nothing saved, nothing logged. It forgets the second it answers.",
     readout: "retained: 0 bytes",
+    img: "/img/spot-shred.png",
+    alt: "A cartoon shredder happily eating a page",
+    tilt: "-3deg",
   },
   {
-    lead: "Invisible to screen share.",
-    body: "The desktop overlay stays out of shared screens and recordings.",
+    lead: "Ghost mode.",
+    body: "You share your screen, they see nothing. The overlay just isn't there.",
     readout: "hidden: macOS, Windows",
+    img: "/img/spot-ghost.png",
+    alt: "A cartoon ghost waving from behind a laptop",
+    tilt: "2.5deg",
   },
   {
-    lead: "Grounded in your notes.",
-    body: "Answers cite the documents you uploaded, not the model's memory.",
+    lead: "It reads your notes.",
+    body: "Answers come from the docs you uploaded, not vibes.",
     readout: "sources: yours",
+    img: "/img/spot-notes.png",
+    alt: "A cartoon stack of notebooks with a face",
+    tilt: "-1.5deg",
   },
 ];
 
 const STEPS = [
-  { step: "1", title: "Create an account", readout: "email and password" },
-  { step: "2", title: "Pick your model", readout: "sonnet or opus, no API key" },
-  { step: "3", title: "Launch the assistant", readout: "browser tab or hidden overlay" },
+  { step: "1", title: "Make an account", readout: "takes like 20 seconds" },
+  { step: "2", title: "Pick your brain", readout: "sonnet or opus, no api key" },
+  { step: "3", title: "Go live", readout: "browser tab or ghost overlay" },
 ];
 
 const BARS = [24, 52, 88, 41, 70, 33, 96, 58, 27, 74, 46, 82, 35, 61, 29, 90, 44, 68, 31, 55];
@@ -144,10 +153,10 @@ export default async function LandingPage() {
           </Link>
           <nav className="flex items-center gap-4 text-sm">
             <Link href="#how-it-helps" className="readout hidden hover:text-[var(--signal-deep)] sm:block">
-              What it does
+              what it does
             </Link>
             <Link href="#how-it-works" className="readout hidden hover:text-[var(--signal-deep)] sm:block">
-              How it works
+              how it works
             </Link>
             {session ? (
               <Link href="/dashboard" className="btn btn-primary">
@@ -170,22 +179,23 @@ export default async function LandingPage() {
       <main className="flex-1">
         <section className="hero-wash">
           <div className="mx-auto w-full max-w-5xl px-6 pb-24 pt-24 text-center sm:pb-36 sm:pt-32">
+            <p className="sticker mx-auto mb-8">live in your ear · invisible on screen</p>
             <h1 className="mx-auto max-w-[17ch] text-[2.9rem] font-extrabold leading-[0.93] tracking-[-0.04em] text-balance sm:text-[4.9rem]">
               Never get caught slipping on a call.
             </h1>
             <p className="mx-auto mt-7 max-w-[46ch] text-lg leading-relaxed text-[var(--graphite)]">
-              Undetectable AI for meetings. DevinAi hears the question, reads your screen and feeds
-              you the answer before the silence gets weird.
+              Undetectable AI for meetings. It hears the question, reads your screen and hands you
+              the answer before the silence gets weird.
             </p>
             <div className="mt-9 flex flex-wrap justify-center gap-3">
               <Link href={session ? "/dashboard" : "/signup"} className="btn btn-primary px-7 py-3.5">
-                {session ? "Open dashboard" : "Get started — free"}
+                {session ? "Open dashboard" : "Let's go — it's free"}
               </Link>
               <Link href="#how-it-works" className="btn btn-secondary px-7 py-3.5">
-                See how it works
+                Show me how
               </Link>
             </div>
-            <p className="readout mt-6">Browser or hidden desktop overlay. No API key either way.</p>
+            <p className="readout mt-6">browser tab or ghost overlay · we never ask for an api key</p>
 
             <div className="mx-auto mt-20 max-w-4xl pb-6 text-left sm:pb-14">
               <CallStage />
@@ -196,16 +206,16 @@ export default async function LandingPage() {
         <section id="how-it-helps" className="wash-soft">
           <div className="mx-auto w-full max-w-6xl px-6 py-28 sm:py-36">
           <h2 className="max-w-[20ch] text-4xl font-bold tracking-[-0.03em] sm:text-[3.25rem]">
-            How DevinAi helps during a call
+            What it&apos;s doing while you&apos;re on mute
           </h2>
 
           <div className="mt-16 grid gap-7 lg:grid-cols-2">
             <article className="card-warm p-8 sm:p-10">
               <h3 className="text-[1.6rem] font-semibold tracking-[-0.02em]">
-                It listens in to the conversation
+                It&apos;s listening so you don&apos;t have to
               </h3>
               <p className="mt-3 max-w-[40ch] leading-relaxed text-[var(--graphite)]">
-                Speech is transcribed on your own machine, as it is spoken.
+                Every word transcribed on your own laptop, live.
               </p>
               <div className="relative mt-10">
                 <div className="screen-frame overflow-hidden rounded-[18px]">
@@ -225,10 +235,10 @@ export default async function LandingPage() {
 
             <article className="card p-8 sm:p-10">
               <h3 className="text-[1.6rem] font-semibold tracking-[-0.02em]">
-                It answers the moment you need it
+                Answers before the awkward pause
               </h3>
               <p className="mt-3 max-w-[40ch] leading-relaxed text-[var(--graphite)]">
-                Claude streams the answer while the question is still in the air.
+                Claude starts typing while they&apos;re still talking.
               </p>
               <div className="relative mt-10">
                 <div className="overflow-hidden rounded-[18px] border border-[var(--rule)]">
@@ -247,11 +257,14 @@ export default async function LandingPage() {
             </article>
           </div>
 
-          <ul className="mt-24 grid gap-10 sm:grid-cols-3 sm:gap-12">
+          <ul className="mt-24 grid gap-12 sm:grid-cols-3">
             {TRAITS.map((trait) => (
-              <li key={trait.lead} className="border-t border-[var(--rule)] pt-6">
-                <p className="readout text-[var(--signal-deep)]">{trait.readout}</p>
-                <p className="mt-4 max-w-[34ch] text-[1.05rem] leading-relaxed">
+              <li key={trait.lead} className="text-center">
+                <div className="spot mx-auto" style={{ rotate: trait.tilt }}>
+                  <Image src={trait.img} alt={trait.alt} width={1024} height={1024} />
+                </div>
+                <p className="readout mt-6 text-[var(--signal-deep)]">{trait.readout}</p>
+                <p className="mx-auto mt-3 max-w-[30ch] text-[1.05rem] leading-relaxed">
                   <span className="font-semibold">{trait.lead}</span>{" "}
                   <span className="text-[var(--graphite)]">{trait.body}</span>
                 </p>
@@ -266,7 +279,9 @@ export default async function LandingPage() {
           className="border-y border-[var(--rule)] bg-[var(--surface)]"
         >
           <div className="mx-auto w-full max-w-6xl px-6 py-28 sm:py-36">
-            <h2 className="text-4xl font-bold tracking-[-0.03em] sm:text-[3.25rem]">How it works</h2>
+            <h2 className="text-4xl font-bold tracking-[-0.03em] sm:text-[3.25rem]">
+              How it works, for real
+            </h2>
             <ol className="mt-14 border-t border-[var(--rule)]">
               {STEPS.map((item) => (
                 <li
@@ -287,16 +302,16 @@ export default async function LandingPage() {
         <section className="band-dark">
           <div className="mx-auto w-full max-w-5xl px-6 py-32 text-center sm:py-40">
             <h2 className="mx-auto max-w-[20ch] text-4xl font-bold tracking-[-0.03em] sm:text-[3.5rem]">
-              Your next call starts soon.
+              Your next call is in ten minutes.
             </h2>
             <p className="mt-5 text-lg text-[var(--surface)]/65">
-              Sign up and launch it in the same tab.
+              Sign up now and be ready before it starts.
             </p>
             <Link
               href={session ? "/dashboard" : "/signup"}
               className="btn btn-primary mt-9 px-8 py-4 text-base"
             >
-              {session ? "Open dashboard" : "Sign up"}
+              {session ? "Open dashboard" : "Let's go"}
             </Link>
           </div>
         </section>
@@ -305,7 +320,7 @@ export default async function LandingPage() {
       <footer className="border-t border-[var(--rule)]">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-6 py-10">
           <span className="readout">
-            DevinAi — a live assistant for meetings, research and note-taking.
+DevinAi — live answers for meetings, research and whatever&apos;s on your screen.
           </span>
           <a
             href="https://github.com/omg775/Open-Cluely"
