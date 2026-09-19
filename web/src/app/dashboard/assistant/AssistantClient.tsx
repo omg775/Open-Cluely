@@ -266,6 +266,11 @@ export function AssistantClient({ model }: { model: string }) {
   }, [ask, startSession, stopListening]);
 
   useEffect(() => {
+    window.addEventListener("pagehide", endSession);
+    return () => window.removeEventListener("pagehide", endSession);
+  }, [endSession]);
+
+  useEffect(() => {
     return () => {
       inFlightRef.current?.abort();
       listeningRef.current = false;
