@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const audioDeviceInput = document.getElementById('audioDevice');
     const testLlmBtn = document.getElementById('testLlmBtn');
     const llmTestFeedback = document.getElementById('llmTestFeedback');
+    const llmAccessStatus = document.getElementById('llmAccessStatus');
     const windowGapInput = document.getElementById('windowGap');
     const codingLanguageSelect = document.getElementById('codingLanguage');
     const activeSkillSelect = document.getElementById('activeSkill');
@@ -187,8 +188,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    async function refreshLlmAccessStatus() {
+        if (!llmAccessStatus) return;
+        try {
+            const status = await window.electronAPI.getLlmStatus();
+            llmAccessStatus.textContent = status?.hostedClaude
+                ? 'Through your OpenCluely account'
+                : status?.hasApiKey
+                    ? 'Local ANTHROPIC_API_KEY'
+                    : 'Not linked — open the dashboard and launch from there';
+        } catch {
+            llmAccessStatus.textContent = 'Unknown';
+        }
+    }
+
+    refreshLlmAccessStatus();
+
     if (testLlmBtn) {
         testLlmBtn.addEventListener('click', async () => {
+            refreshLlmAccessStatus();
             if (llmTestFeedback) llmTestFeedback.textContent = 'Testing...';
             try {
                 const result = await window.electronAPI.testLlmConnection();

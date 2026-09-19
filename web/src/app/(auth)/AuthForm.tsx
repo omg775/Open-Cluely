@@ -23,7 +23,7 @@ export function AuthForm({ mode, action }: Props) {
       </h1>
       <p className="mt-2 text-sm text-[var(--muted)]">
         {isSignup
-          ? "You will bring your own Anthropic key on the next screen."
+          ? "Email and password only — there is no API key to bring."
           : "Log in to reach your dashboard and launch the assistant."}
       </p>
 
