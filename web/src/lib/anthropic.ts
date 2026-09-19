@@ -27,8 +27,15 @@ const neutralizeMarkup = (text: string) =>
 const sanitizeDocumentName = (name: string) =>
   neutralizeMarkup(name).replace(/["\n\r]/g, " ").trim().slice(0, 120) || "document";
 
-export function composeSystemPrompt(documents: { filename: string; content: string }[]): string {
-  const sections = [BASE_PROMPT];
+/**
+ * The desktop app has its own skill prompt, so it may replace the base prompt;
+ * grounding documents and the confidence rule are always the server's.
+ */
+export function composeSystemPrompt(
+  documents: { filename: string; content: string }[],
+  basePrompt: string = BASE_PROMPT
+): string {
+  const sections = [basePrompt.trim() || BASE_PROMPT];
   let budget = MAX_GROUNDING_CHARS;
   const wrapped: string[] = [];
 
@@ -68,26 +75,38 @@ export function anthropicClient(): Anthropic {
   return new Anthropic({ apiKey, timeout: 60_000, maxRetries: 1 });
 }
 
+export const IMAGE_MEDIA_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+] as const;
+
+export type ImageMediaType = (typeof IMAGE_MEDIA_TYPES)[number];
+
 export type AssistantContent =
   | { type: "text"; text: string }
   | {
       type: "image";
-      source: { type: "base64"; media_type: "image/jpeg" | "image/png"; data: string };
+      source: { type: "base64"; media_type: ImageMediaType; data: string };
     };
+
+export type AssistantMessage = { role: "user" | "assistant"; content: AssistantContent[] };
 
 export function streamAnswer(options: {
   model: string;
   system: string;
-  content: AssistantContent[];
+  messages: AssistantMessage[];
+  maxTokens?: number;
   signal: AbortSignal;
 }): AsyncIterable<string> {
   const stream = anthropicClient().messages.stream(
     {
       model: options.model,
-      max_tokens: 1024,
+      max_tokens: Math.min(options.maxTokens ?? 1024, 4096),
       temperature: 0.3,
       system: options.system,
-      messages: [{ role: "user", content: options.content }],
+      messages: options.messages,
     },
     { signal: options.signal }
   );

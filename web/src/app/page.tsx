@@ -8,7 +8,7 @@ const FEATURES = [
   },
   {
     title: "Nothing is stored",
-    body: "Screen frames and speech stay in your tab except for the single Claude request that answers each question. We keep session metadata — time and duration — and no content.",
+    body: "Screen frames and speech leave your machine only in the single Claude request that answers each question. We keep session metadata — time and duration — and no content.",
   },
   {
     title: "Answers stream as they are written",
@@ -23,7 +23,7 @@ const FEATURES = [
 const STEPS = [
   { step: "1", title: "Create an account", body: "Email and password. Takes a few seconds." },
   { step: "2", title: "Pick your model", body: "Sonnet for speed or Opus for depth. There is no API key to bring — Claude runs on our side." },
-  { step: "3", title: "Launch the assistant", body: "It opens in the same tab. Grant screen and microphone permission and it starts listening." },
+  { step: "3", title: "Launch the assistant", body: "Open it in the same tab, or link the desktop app for an overlay that stays hidden during a screen share and transcribes locally." },
 ];
 
 export default async function LandingPage() {
@@ -82,7 +82,7 @@ export default async function LandingPage() {
             </Link>
           </div>
           <p className="mt-4 text-xs text-[var(--muted)]">
-            Runs in your browser. No download, no API key, no setup.
+            Runs in your browser, or as a hidden desktop overlay. No API key either way.
           </p>
         </section>
 

@@ -896,13 +896,14 @@ class MainWindowUI {
                     <button class="text-gray-400 hover:text-white" onclick="this.closest('.fixed').remove()">✕</button>
                 </div>
 
-                <div class="mb-4 p-3 rounded ${status.hasApiKey ? 'bg-green-900' : 'bg-red-900'}">
-                    <p><strong>Status:</strong> ${status.hasApiKey ? 'Configured' : 'Not Configured'}</p>
+                <div class="mb-4 p-3 rounded ${status.isInitialized ? 'bg-green-900' : 'bg-red-900'}">
+                    <p><strong>Status:</strong> ${status.isInitialized ? 'Configured' : 'Not Configured'}</p>
+                    <p><strong>Claude access:</strong> ${status.hostedClaude ? 'Through your OpenCluely account' : status.hasApiKey ? 'Local ANTHROPIC_API_KEY' : 'None'}</p>
                     <p><strong>Model:</strong> ${status.model}</p>
                 </div>
 
                 <p class="text-xs text-gray-400 mb-4">
-                    Set ANTHROPIC_API_KEY in your .env file and restart the app to change it.
+                    Sign in from the dashboard and answers run on our servers — no API key needed here.
                 </p>
 
                 <div class="flex space-x-2">

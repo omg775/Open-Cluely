@@ -28,16 +28,18 @@ export default async function LaunchPage() {
       <div>
         <h1 className="text-2xl font-semibold">Launch assistant</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          The assistant runs in this browser. Screen frames and speech stay in your tab except for
-          the single Claude request that answers each question, and nothing spoken is stored.
+          Two ways to run it, both keyless: the desktop app for an overlay that stays hidden during
+          a screen share, or this browser tab when you would rather not install anything. Nothing
+          spoken is stored either way.
         </p>
       </div>
 
       <div className="panel p-6">
-        <h2 className="text-base font-medium">Open in this browser</h2>
+        <h2 className="text-base font-medium">Quick start: open in this browser</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Nothing to install. Grant screen and microphone permission when the browser asks, and
-          answers stream in as questions come up.
+          answers stream in as questions come up. The tab is visible to anyone you share your screen
+          with.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <Link href="/dashboard/assistant" className="btn btn-primary px-5 py-2.5">

@@ -1,6 +1,8 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const logger = require('../core/logger').createServiceLogger('LLM');
 const config = require('../core/config');
+const accountService = require('./account.service');
+const { sendHostedRequest } = require('./hosted-llm.transport');
 const { promptLoader } = require('../../prompt-loader');
 
 const LANGUAGE_TITLES = { cpp: 'C++', c: 'C', python: 'Python', java: 'Java', javascript: 'JavaScript', js: 'JavaScript' };
@@ -65,6 +67,19 @@ class LLMService {
     }
   }
 
+  /**
+   * A linked account routes every request through the dashboard, which holds
+   * the Anthropic key, so the desktop app never asks for one. A local
+   * ANTHROPIC_API_KEY stays supported for running the app standalone.
+   */
+  usesHostedClaude() {
+    return !this.isInitialized && accountService.isLinked();
+  }
+
+  isReady() {
+    return this.isInitialized || accountService.isLinked();
+  }
+
   getModel() {
     return this.modelOverride || config.get('llm.anthropic.model') || config.DEFAULT_MODEL;
   }
@@ -110,6 +125,10 @@ class LLMService {
     const sections = [];
     if (basePrompt && basePrompt.trim()) sections.push(basePrompt.trim());
 
+    // The dashboard owns the documents and the confidence rule for linked
+    // apps, so only the skill prompt travels with a hosted request.
+    if (this.usesHostedClaude()) return sections.join('\n\n');
+
     if (this.groundingDocuments.length > 0) {
       const documents = this.groundingDocuments
         .map(document => `<document name="${document.filename}">\n${document.content}\n</document>`)
@@ -127,29 +146,33 @@ class LLMService {
   getStats() {
     return {
       hasApiKey: !!config.getApiKey('ANTHROPIC'),
+      hostedClaude: this.usesHostedClaude(),
+      accountLinked: accountService.isLinked(),
       provider: 'anthropic',
       model: this.getModel(),
       groundingDocuments: this.groundingDocuments.length,
       streaming: !!config.get('llm.anthropic.streaming'),
-      isInitialized: this.isInitialized,
+      isInitialized: this.isReady(),
       requestCount: this.requestCount,
       errorCount: this.errorCount
     };
   }
 
   async testConnection() {
-    if (!this.isInitialized) {
-      return { success: false, error: 'No Anthropic API key configured' };
+    if (!this.isReady()) {
+      return { success: false, error: 'Sign in from the dashboard, or set ANTHROPIC_API_KEY in .env' };
     }
 
-    try {
-      const message = await this.client.messages.create({
-        model: this.getModel(),
-        max_tokens: 16,
-        messages: [{ role: 'user', content: 'Reply with the single word: ready' }]
-      });
+    const probe = {
+      model: this.getModel(),
+      max_tokens: 16,
+      messages: [{ role: 'user', content: 'Reply with the single word: ready' }]
+    };
 
-      const text = this.extractText(message);
+    try {
+      const text = this.usesHostedClaude()
+        ? await sendHostedRequest(accountService, probe)
+        : this.extractText(await this.client.messages.create(probe));
       if (text.trim().length > 0) {
         return { success: true, model: this.getModel(), responseSnippet: text.slice(0, 200) };
       }
@@ -226,8 +249,8 @@ class LLMService {
   }
 
   assertReady() {
-    if (!this.isInitialized) {
-      const error = new Error('Claude is not configured. Add ANTHROPIC_API_KEY to your .env.');
+    if (!this.isReady()) {
+      const error = new Error('Claude is not configured. Link this app from the dashboard, or add ANTHROPIC_API_KEY to your .env.');
       error.errorAnalysis = { type: 'CONFIG_ERROR', userMessage: error.message };
       throw error;
     }
@@ -432,6 +455,10 @@ You are assisting someone during a live call, meeting, or research session. You 
   }
 
   async executeOnce(payload, signal) {
+    if (this.usesHostedClaude()) {
+      return sendHostedRequest(accountService, payload, { signal });
+    }
+
     const message = await this.client.messages.create(payload, signal ? { signal } : undefined);
     return this.extractText(message);
   }
@@ -441,6 +468,10 @@ You are assisting someone during a live call, meeting, or research session. You 
    * 'text' events; each chunk is forwarded to onDelta as it arrives.
    */
   async executeStreaming(payload, onDelta, signal) {
+    if (this.usesHostedClaude()) {
+      return sendHostedRequest(accountService, payload, { onDelta, signal });
+    }
+
     const stream = this.client.messages.stream(payload, signal ? { signal } : undefined);
     this.activeStream = stream;
 
