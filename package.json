@@ -68,6 +68,14 @@
     "asarUnpack": [
       "node_modules/**/*"
     ],
+    "protocols": [
+      {
+        "name": "OpenCluely launch link",
+        "schemes": [
+          "opencluely"
+        ]
+      }
+    ],
     "mac": {
       "category": "public.app-category.utilities",
       "target": [
