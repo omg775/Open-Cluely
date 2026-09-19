@@ -84,6 +84,17 @@ body {
     0 40px 80px -48px rgba(18, 17, 15, 0.85);
 }
 
+/* Photographic screens sit in a thin frame so they read as a device, not a bleed. */
+.screen-frame {
+  border: 1px solid var(--rule);
+  background: #0e0d0c;
+  box-shadow: 0 30px 60px -44px rgba(18, 17, 15, 0.7);
+}
+
+.plane-dark {
+  box-shadow: 0 24px 48px -34px rgba(18, 17, 15, 0.8);
+}
+
 .pulse-dot {
   background: var(--listening);
   box-shadow: 0 0 0 3px rgba(240, 160, 75, 0.18);

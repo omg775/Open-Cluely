@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { getSession } from "@/lib/session";
 
@@ -61,16 +62,36 @@ function SessionHeader({
   );
 }
 
+function CallStage() {
+  return (
+    <div className="relative">
+      <div className="screen-frame overflow-hidden rounded-[26px]">
+        <Image
+          src="/img/zoom-call.png"
+          alt="A two-person video call in progress"
+          width={1600}
+          height={1005}
+          priority
+          className="w-full"
+        />
+      </div>
+      <div className="mx-auto -mt-16 w-[92%] sm:absolute sm:-bottom-10 sm:right-[-3%] sm:mt-0 sm:w-[62%] lg:w-[54%]">
+        <LivePanel />
+      </div>
+    </div>
+  );
+}
+
 function LivePanel() {
   return (
-    <div className="plane-dark plane-dark-lifted rounded-[26px]">
+    <div className="plane-dark plane-dark-lifted rounded-[22px]">
       <SessionHeader />
-      <div className="px-6 pb-8 pt-6 sm:px-8">
+      <div className="px-6 pb-7 pt-5 sm:px-7">
         <Waveform />
         <p className="readout mt-6 text-[var(--surface)]/55">
           them: “…so what did we commit to on the migration date?”
         </p>
-        <p className="mt-3 text-2xl leading-snug tracking-[-0.02em] sm:text-[1.9rem]">
+        <p className="mt-3 text-xl leading-snug tracking-[-0.02em] sm:text-[1.6rem]">
           <span className="stream">March 14, with a one-week buffer.</span>
         </p>
         <p className="readout mt-4 text-[var(--listening)]">
@@ -166,8 +187,8 @@ export default async function LandingPage() {
             </div>
             <p className="readout mt-6">Browser or hidden desktop overlay. No API key either way.</p>
 
-            <div className="mx-auto mt-20 max-w-3xl text-left">
-              <LivePanel />
+            <div className="mx-auto mt-20 max-w-4xl pb-6 text-left sm:pb-14">
+              <CallStage />
             </div>
           </div>
         </section>
@@ -185,8 +206,19 @@ export default async function LandingPage() {
               <p className="mt-3 max-w-[40ch] leading-relaxed text-[var(--graphite)]">
                 Speech is transcribed on your own machine, as it is spoken.
               </p>
-              <div className="mt-10">
-                <TranscriptMock />
+              <div className="relative mt-10">
+                <div className="screen-frame overflow-hidden rounded-[18px]">
+                  <Image
+                    src="/img/boring-call.png"
+                    alt="Someone half asleep on a long video call"
+                    width={1280}
+                    height={720}
+                    className="w-full"
+                  />
+                </div>
+                <div className="-mt-10 px-3">
+                  <TranscriptMock />
+                </div>
               </div>
             </article>
 
@@ -197,8 +229,19 @@ export default async function LandingPage() {
               <p className="mt-3 max-w-[40ch] leading-relaxed text-[var(--graphite)]">
                 Claude streams the answer while the question is still in the air.
               </p>
-              <div className="mt-10">
-                <AnswerMock />
+              <div className="relative mt-10">
+                <div className="overflow-hidden rounded-[18px] border border-[var(--rule)]">
+                  <Image
+                    src="/img/overlay-illustration.png"
+                    alt="An assistant card floating over a video call on a laptop"
+                    width={1536}
+                    height={1024}
+                    className="w-full"
+                  />
+                </div>
+                <div className="-mt-14 px-3">
+                  <AnswerMock />
+                </div>
               </div>
             </article>
           </div>
