@@ -767,7 +767,12 @@ class ApplicationController {
 
     const message = error?.errorAnalysis?.userMessage || error?.message || 'Claude request failed.';
 
-    logger.error('Claude request failed', { context, error: message, skill: this.activeSkill });
+    logger.error('Claude request failed', {
+      context,
+      error: message,
+      skill: this.activeSkill,
+      stack: error?.originalError?.stack || error?.stack
+    });
 
     windowManager.showLLMError(message, { skill: this.activeSkill, context });
     this.broadcastLLMError(message);

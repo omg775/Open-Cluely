@@ -347,13 +347,20 @@ if (typeof window === 'undefined') {
       }
     }
   };
-  global.document = global.window.document;
-  global.navigator = global.window.navigator;
-  global.AudioContext = global.window.AudioContext;
-  global.webkitAudioContext = global.window.webkitAudioContext;
-  global.URL = global.window.URL;
-  global.Blob = global.window.Blob;
-  global.File = global.window.File;
+  // Only fill in globals the runtime lacks: the shimmed URL/Blob/File are
+  // minimal stand-ins and must never shadow the real platform implementations
+  // other services (e.g. the Anthropic SDK) depend on.
+  const polyfillGlobal = (name, value) => {
+    if (typeof global[name] === 'undefined') global[name] = value;
+  };
+
+  polyfillGlobal('document', global.window.document);
+  polyfillGlobal('navigator', global.window.navigator);
+  polyfillGlobal('AudioContext', global.window.AudioContext);
+  polyfillGlobal('webkitAudioContext', global.window.webkitAudioContext);
+  polyfillGlobal('URL', global.window.URL);
+  polyfillGlobal('Blob', global.window.Blob);
+  polyfillGlobal('File', global.window.File);
 
   if (!global.performance) {
     global.performance = {
