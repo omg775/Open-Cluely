@@ -45,32 +45,35 @@ function Waveform() {
   );
 }
 
-function SessionHeader() {
+function SessionHeader({
+  status = "listening",
+  right = "claude-sonnet-4-5",
+}: {
+  status?: string;
+  right?: string;
+}) {
   return (
-    <div className="flex items-center gap-3 border-b border-white/15 px-5 py-3">
-      <span
-        className="inline-block h-2 w-2 rounded-full bg-[var(--listening)]"
-        aria-hidden="true"
-      />
-      <span className="readout text-[var(--surface)]/70">listening</span>
-      <span className="readout ml-auto text-[var(--surface)]/70">claude-sonnet-4-5</span>
+    <div className="flex items-center gap-3 border-b border-white/10 px-6 py-3.5">
+      <span className="pulse-dot inline-block h-1.5 w-1.5 rounded-full" aria-hidden="true" />
+      <span className="readout text-[var(--surface)]/65">{status}</span>
+      <span className="readout ml-auto text-[var(--surface)]/45">{right}</span>
     </div>
   );
 }
 
 function LivePanel() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--rule)] bg-[var(--ink)] text-[var(--surface)] shadow-[0_24px_60px_-40px_rgba(13,13,13,0.7)]">
+    <div className="plane-dark plane-dark-lifted rounded-[26px]">
       <SessionHeader />
-      <div className="px-5 pb-6 pt-5">
+      <div className="px-6 pb-8 pt-6 sm:px-8">
         <Waveform />
-        <p className="readout mt-5 text-[var(--surface)]/60">
+        <p className="readout mt-6 text-[var(--surface)]/55">
           them: “…so what did we commit to on the migration date?”
         </p>
-        <p className="mt-2 text-xl leading-relaxed sm:text-2xl">
+        <p className="mt-3 text-2xl leading-snug tracking-[-0.02em] sm:text-[1.9rem]">
           <span className="stream">March 14, with a one-week buffer.</span>
         </p>
-        <p className="readout mt-3 text-[var(--listening)]">
+        <p className="readout mt-4 text-[var(--listening)]">
           grounded in rollout-brief.md, line 12
         </p>
       </div>
@@ -80,14 +83,14 @@ function LivePanel() {
 
 function TranscriptMock() {
   return (
-    <div className="overflow-hidden rounded-xl border border-[var(--rule)] bg-[var(--ink)] text-[var(--surface)]">
+    <div className="plane-dark rounded-[18px]">
       <SessionHeader />
-      <div className="space-y-2 px-5 py-5">
+      <div className="space-y-2 px-6 py-6">
         <Waveform />
-        <p className="readout pt-2 text-[var(--surface)]/60">
+        <p className="readout pt-3 text-[var(--surface)]/55">
           them: “…can we still hit the date we promised?”
         </p>
-        <p className="readout text-[var(--surface)]/60">you: “let me check the brief.”</p>
+        <p className="readout text-[var(--surface)]/35">you: “let me check the brief.”</p>
       </div>
     </div>
   );
@@ -95,13 +98,10 @@ function TranscriptMock() {
 
 function AnswerMock() {
   return (
-    <div className="overflow-hidden rounded-xl border border-[var(--rule)] bg-[var(--ink)] text-[var(--surface)]">
-      <div className="flex items-center gap-3 border-b border-white/15 px-5 py-3">
-        <span className="readout text-[var(--surface)]/70">answering</span>
-        <span className="readout ml-auto text-[var(--surface)]/70">first token 0.9s</span>
-      </div>
-      <div className="space-y-3 px-5 py-5">
-        <p className="text-base leading-relaxed">
+    <div className="plane-dark rounded-[18px]">
+      <SessionHeader status="answering" right="first token 0.9s" />
+      <div className="space-y-4 px-6 py-6">
+        <p className="text-[1.05rem] leading-relaxed">
           March 14, with a one-week buffer — the date you committed to in the rollout brief.
         </p>
         <p className="readout text-[var(--listening)]">grounded in rollout-brief.md, line 12</p>
@@ -115,9 +115,10 @@ export default async function LandingPage() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-10 border-b border-[var(--rule)] bg-[var(--paper)]/85 backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-[var(--rule)]/70 bg-[var(--paper)]/80 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" className="text-base font-bold tracking-tight">
+          <Link href="/" className="flex items-center gap-2 text-base font-bold tracking-tight">
+            <span className="pulse-dot h-1.5 w-1.5 rounded-full" aria-hidden="true" />
             OpenCluely
           </Link>
           <nav className="flex items-center gap-4 text-sm">
@@ -147,11 +148,11 @@ export default async function LandingPage() {
 
       <main className="flex-1">
         <section className="hero-wash">
-          <div className="mx-auto w-full max-w-5xl px-6 pb-24 pt-20 text-center sm:pb-32 sm:pt-28">
-            <h1 className="mx-auto max-w-[18ch] text-[2.8rem] font-extrabold leading-[0.95] tracking-[-0.035em] sm:text-[4.6rem]">
+          <div className="mx-auto w-full max-w-5xl px-6 pb-24 pt-24 text-center sm:pb-36 sm:pt-32">
+            <h1 className="mx-auto max-w-[17ch] text-[2.9rem] font-extrabold leading-[0.93] tracking-[-0.04em] text-balance sm:text-[4.9rem]">
               Answers while the conversation is still happening.
             </h1>
-            <p className="mx-auto mt-6 max-w-[48ch] text-lg leading-relaxed text-[var(--graphite)]">
+            <p className="mx-auto mt-7 max-w-[46ch] text-lg leading-relaxed text-[var(--graphite)]">
               OpenCluely listens to your meeting, reads your screen, and streams grounded answers
               back — without storing a word of it.
             </p>
@@ -163,50 +164,50 @@ export default async function LandingPage() {
                 See how it works
               </Link>
             </div>
-            <p className="readout mt-5">Browser or hidden desktop overlay. No API key either way.</p>
+            <p className="readout mt-6">Browser or hidden desktop overlay. No API key either way.</p>
 
-            <div className="mx-auto mt-16 max-w-3xl text-left">
+            <div className="mx-auto mt-20 max-w-3xl text-left">
               <LivePanel />
             </div>
           </div>
         </section>
 
         <section id="how-it-helps" className="mx-auto w-full max-w-6xl px-6 py-28 sm:py-36">
-          <h2 className="max-w-[20ch] text-4xl font-bold tracking-tight sm:text-5xl">
+          <h2 className="max-w-[20ch] text-4xl font-bold tracking-[-0.03em] sm:text-[3.25rem]">
             How OpenCluely helps during a call
           </h2>
 
-          <div className="mt-14 grid gap-6 lg:grid-cols-2">
-            <article className="card-warm p-8">
-              <h3 className="text-2xl font-semibold tracking-tight">
+          <div className="mt-16 grid gap-7 lg:grid-cols-2">
+            <article className="card-warm p-8 sm:p-10">
+              <h3 className="text-[1.6rem] font-semibold tracking-[-0.02em]">
                 It listens in to the conversation
               </h3>
-              <p className="mt-3 max-w-[42ch] text-[0.95rem] leading-relaxed text-[var(--graphite)]">
+              <p className="mt-3 max-w-[40ch] leading-relaxed text-[var(--graphite)]">
                 Speech is transcribed on your own machine, as it is spoken.
               </p>
-              <div className="mt-8">
+              <div className="mt-10">
                 <TranscriptMock />
               </div>
             </article>
 
-            <article className="card p-8">
-              <h3 className="text-2xl font-semibold tracking-tight">
+            <article className="card p-8 sm:p-10">
+              <h3 className="text-[1.6rem] font-semibold tracking-[-0.02em]">
                 It answers the moment you need it
               </h3>
-              <p className="mt-3 max-w-[42ch] text-[0.95rem] leading-relaxed text-[var(--graphite)]">
+              <p className="mt-3 max-w-[40ch] leading-relaxed text-[var(--graphite)]">
                 Claude streams the answer while the question is still in the air.
               </p>
-              <div className="mt-8">
+              <div className="mt-10">
                 <AnswerMock />
               </div>
             </article>
           </div>
 
-          <ul className="mt-20 grid gap-10 sm:grid-cols-3">
+          <ul className="mt-24 grid gap-10 sm:grid-cols-3 sm:gap-12">
             {TRAITS.map((trait) => (
-              <li key={trait.lead}>
+              <li key={trait.lead} className="border-t border-[var(--rule)] pt-6">
                 <p className="readout text-[var(--signal-deep)]">{trait.readout}</p>
-                <p className="mt-3 text-[1.05rem] leading-relaxed">
+                <p className="mt-4 max-w-[34ch] text-[1.05rem] leading-relaxed">
                   <span className="font-semibold">{trait.lead}</span>{" "}
                   <span className="text-[var(--graphite)]">{trait.body}</span>
                 </p>
@@ -220,17 +221,17 @@ export default async function LandingPage() {
           className="border-y border-[var(--rule)] bg-[var(--surface)]"
         >
           <div className="mx-auto w-full max-w-6xl px-6 py-28 sm:py-36">
-            <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">How it works</h2>
+            <h2 className="text-4xl font-bold tracking-[-0.03em] sm:text-[3.25rem]">How it works</h2>
             <ol className="mt-14 border-t border-[var(--rule)]">
               {STEPS.map((item) => (
                 <li
                   key={item.step}
-                  className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-[var(--rule)] py-10"
+                  className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-[var(--rule)] py-9"
                 >
                   <span className="marker" aria-hidden="true">
                     {item.step}
                   </span>
-                  <h3 className="text-2xl font-semibold tracking-tight">{item.title}</h3>
+                  <h3 className="text-[1.45rem] font-semibold tracking-[-0.02em]">{item.title}</h3>
                   <p className="readout ml-auto text-[var(--signal-deep)]">{item.readout}</p>
                 </li>
               ))}
@@ -240,7 +241,7 @@ export default async function LandingPage() {
 
         <section className="hero-wash">
           <div className="mx-auto w-full max-w-5xl px-6 py-32 text-center sm:py-40">
-            <h2 className="mx-auto max-w-[20ch] text-4xl font-bold tracking-tight sm:text-5xl">
+            <h2 className="mx-auto max-w-[20ch] text-4xl font-bold tracking-[-0.03em] sm:text-[3.5rem]">
               Ready for your next call?
             </h2>
             <p className="mt-5 text-lg text-[var(--graphite)]">

@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #e4e4de;
-  --surface: #f6f6f3;
-  --ink: #0d0d0d;
-  --graphite: #63665f;
-  --rule: #c3c3bb;
+  --paper: #efece4;
+  --surface: #fbf9f4;
+  --ink: #12110f;
+  --graphite: #6a6760;
+  --rule: #d6d1c5;
   --signal: #d9822b;
-  --signal-deep: #a85c13;
-  --listening: #d9822b;
+  --signal-deep: #9c540f;
+  --listening: #f0a04b;
 }
 
 @theme inline {
@@ -27,6 +27,8 @@ body {
   color: var(--ink);
   font-family: var(--font-archivo), system-ui, sans-serif;
   font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection {
@@ -48,27 +50,50 @@ body {
 
 /* Large soft planes used for the product-story sections. */
 .card {
-  background: var(--surface);
+  background: linear-gradient(180deg, #fdfcf9 0%, var(--surface) 100%);
   border: 1px solid var(--rule);
-  border-radius: 20px;
+  border-radius: 26px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 18px 40px -34px rgba(18, 17, 15, 0.55);
 }
 
 .card-warm {
-  background: linear-gradient(170deg, #f3e2cd 0%, #efd9bd 100%);
-  border: 1px solid #e3cbac;
-  border-radius: 20px;
+  background: linear-gradient(168deg, #f8e7cf 0%, #f2d8b4 100%);
+  border: 1px solid #e7cda8;
+  border-radius: 26px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 18px 40px -34px rgba(120, 74, 20, 0.5);
 }
 
 .hero-wash {
   background:
-    radial-gradient(120% 80% at 50% 0%, #f7ecdd 0%, rgba(247, 236, 221, 0) 62%),
+    radial-gradient(90% 60% at 50% -5%, #fbeedd 0%, rgba(251, 238, 221, 0) 70%),
+    radial-gradient(55% 45% at 88% 18%, #f6e2ca 0%, rgba(246, 226, 202, 0) 70%),
     var(--paper);
+}
+
+/* The one dark surface: the session itself. */
+.plane-dark {
+  background: linear-gradient(180deg, #1b1a17 0%, #0e0d0c 100%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: var(--surface);
+  overflow: hidden;
+}
+
+.plane-dark-lifted {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.07) inset,
+    0 40px 80px -48px rgba(18, 17, 15, 0.85);
+}
+
+.pulse-dot {
+  background: var(--listening);
+  box-shadow: 0 0 0 3px rgba(240, 160, 75, 0.18);
 }
 
 .readout {
   font-family: var(--font-plex-mono), ui-monospace, monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.01em;
+  font-size: 0.73rem;
+  line-height: 1.5;
+  letter-spacing: 0.015em;
   color: var(--graphite);
 }
 
@@ -97,12 +122,13 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.6rem;
-  height: 1.7rem;
-  border: 1px solid var(--signal);
+  width: 1.85rem;
+  height: 1.85rem;
+  background: rgba(217, 130, 43, 0.12);
+  border: 1px solid rgba(217, 130, 43, 0.45);
   border-radius: 999px;
   font-family: var(--font-plex-mono), ui-monospace, monospace;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--signal-deep);
 }
 
@@ -118,7 +144,8 @@ body {
   letter-spacing: -0.01em;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease,
+    box-shadow 140ms ease, transform 140ms ease;
 }
 
 .btn:disabled {
@@ -127,24 +154,29 @@ body {
 }
 
 .btn-primary {
-  background: var(--signal);
+  background: linear-gradient(180deg, #e2913a 0%, var(--signal) 100%);
   color: var(--ink);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 0 12px 24px -16px rgba(156, 84, 15, 0.9);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--signal-deep);
-  color: var(--surface);
+  background: linear-gradient(180deg, #c2701f 0%, var(--signal-deep) 100%);
+  color: #fff7ec;
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px -16px rgba(156, 84, 15, 0.95);
 }
 
 .btn-secondary {
-  background: transparent;
-  border-color: var(--ink);
+  background: rgba(255, 255, 255, 0.6);
+  border-color: var(--rule);
   color: var(--ink);
 }
 
 .btn-secondary:hover:not(:disabled) {
+  background: #ffffff;
   border-color: var(--signal);
   color: var(--signal-deep);
+  transform: translateY(-1px);
 }
 
 /* The one orchestrated motion moment: the hero plays a single session. */
@@ -179,6 +211,9 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .btn:hover:not(:disabled) {
+    transform: none;
+  }
   .bar,
   .stream {
     animation: none;
