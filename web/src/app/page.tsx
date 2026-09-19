@@ -146,18 +146,20 @@ export default async function LandingPage() {
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-10 border-b border-[var(--rule)]/70 bg-[var(--paper)]/80 backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-8 px-8 py-5 sm:px-12">
           <Link href="/" className="flex items-center gap-2 text-base font-bold tracking-tight">
             <span className="pulse-dot h-1.5 w-1.5 rounded-full" aria-hidden="true" />
             DevinAi
           </Link>
-          <nav className="flex items-center gap-4 text-sm">
-            <Link href="#how-it-helps" className="readout hidden hover:text-[var(--signal-deep)] sm:block">
+          <nav className="hidden items-center gap-10 sm:flex">
+            <Link href="#how-it-helps" className="readout hover:text-[var(--signal-deep)]">
               what it does
             </Link>
-            <Link href="#how-it-works" className="readout hidden hover:text-[var(--signal-deep)] sm:block">
+            <Link href="#how-it-works" className="readout hover:text-[var(--signal-deep)]">
               how it works
             </Link>
+          </nav>
+          <div className="flex items-center gap-3 text-sm">
             {session ? (
               <Link href="/dashboard" className="btn btn-primary">
                 Dashboard
@@ -172,7 +174,7 @@ export default async function LandingPage() {
                 </Link>
               </>
             )}
-          </nav>
+          </div>
         </div>
       </header>
 
@@ -302,10 +304,10 @@ export default async function LandingPage() {
         <section className="band-dark">
           <div className="mx-auto w-full max-w-5xl px-6 py-32 text-center sm:py-40">
             <h2 className="mx-auto max-w-[20ch] text-4xl font-bold tracking-[-0.03em] sm:text-[3.5rem]">
-              Your next call is in ten minutes.
+              Not prepared for an interview? No worries.
             </h2>
             <p className="mt-5 text-lg text-[var(--surface)]/65">
-              Sign up now and be ready before it starts.
+              Sign up and walk in with backup.
             </p>
             <Link
               href={session ? "/dashboard" : "/signup"}
