@@ -36,6 +36,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   testLlmConnection: () => ipcRenderer.invoke('test-llm-connection'),
   runLlmDiagnostics: () => ipcRenderer.invoke('run-llm-diagnostics'),
   
+  // Dashboard account link
+  getAccountStatus: () => ipcRenderer.invoke('get-account-status'),
+  syncAccountConfig: () => ipcRenderer.invoke('sync-account-config'),
+  unlinkAccount: () => ipcRenderer.invoke('unlink-account'),
+
   // Settings
   showSettings: () => ipcRenderer.invoke('show-settings'),
   hideSettings: () => ipcRenderer.invoke('hide-settings'),
@@ -95,6 +100,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onRecordingStarted: (callback) => ipcRenderer.on('recording-started', callback),
   onRecordingStopped: (callback) => ipcRenderer.on('recording-stopped', callback),
   onCodingLanguageChanged: (callback) => ipcRenderer.on('coding-language-changed', callback),
+  onAccountStatus: (callback) => ipcRenderer.on('account-status', callback),
   
   // Generic receive method
   receive: (channel, callback) => ipcRenderer.on(channel, callback),

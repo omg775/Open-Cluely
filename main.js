@@ -16,6 +16,7 @@ app.commandLine.appendSwitch("no-pings");
 const captureService = require("./src/services/capture.service");
 const speechService = require("./src/services/speech.service");
 const llmService = require("./src/services/llm.service");
+const accountService = require("./src/services/account.service");
 
 // Managers
 const windowManager = require("./src/managers/window.manager");
@@ -73,6 +74,13 @@ class ApplicationController {
   }
 
   setupEventHandlers() {
+    // macOS delivers opencluely:// links through open-url, which can fire
+    // before the app is ready.
+    app.on("open-url", (event, url) => {
+      event.preventDefault();
+      this.handleDeepLink(url);
+    });
+
     app.whenReady().then(() => this.onAppReady());
     app.on("window-all-closed", () => this.onWindowAllClosed());
     app.on("activate", () => this.onActivate());
@@ -82,8 +90,11 @@ class ApplicationController {
     this.setupServiceEventHandlers();
   }
 
-  handleSecondInstance() {
+  handleSecondInstance(argv = []) {
     logger.info("Second instance launch detected; focusing existing windows");
+
+    const deepLink = accountService.findDeepLink(argv);
+    if (deepLink) this.handleDeepLink(deepLink);
 
     const focusExistingWindows = () => {
       try {
@@ -129,6 +140,7 @@ class ApplicationController {
 
     try {
       this.setupPermissions();
+      accountService.registerProtocol();
 
       // Small delay to ensure desktop/space detection is accurate
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -146,6 +158,13 @@ class ApplicationController {
       });
 
       sessionManager.addEvent("Application started");
+
+      const deepLink = accountService.findDeepLink(process.argv);
+      if (deepLink) {
+        this.handleDeepLink(deepLink);
+      } else if (accountService.load()) {
+        this.syncAccountConfig();
+      }
     } catch (error) {
       logger.error("Application initialization failed", {
         error: error.message,
@@ -194,14 +213,63 @@ class ApplicationController {
     });
   }
 
+  /**
+   * Link this app to a dashboard account from an opencluely:// launch link and
+   * apply the account's key, model and grounding documents.
+   */
+  async handleDeepLink(deepLink) {
+    try {
+      logger.info("Handling launch link");
+      const payload = await accountService.handleDeepLink(deepLink);
+      this.applyAccountPayload(payload);
+      this.broadcastAccountStatus(`Linked to ${accountService.getStatus().email || "your OpenCluely account"}`);
+    } catch (error) {
+      logger.error("Failed to handle launch link", { error: error.message });
+      this.broadcastAccountStatus(`Launch link failed: ${error.message}`, true);
+    }
+  }
+
+  async syncAccountConfig() {
+    try {
+      this.applyAccountPayload(await accountService.fetchConfig());
+      this.broadcastAccountStatus(`Synced settings for ${accountService.getStatus().email || "your account"}`);
+    } catch (error) {
+      logger.warn("Could not sync account settings", { error: error.message });
+    }
+  }
+
+  applyAccountPayload({ settings = {}, documents = [] } = {}) {
+    if (typeof settings.anthropicKey === "string" && settings.anthropicKey.trim()) {
+      llmService.updateApiKey(settings.anthropicKey);
+      this.persistSettings({ anthropicKey: settings.anthropicKey });
+    }
+
+    if (typeof settings.model === "string" && settings.model.trim()) {
+      llmService.setModel(settings.model);
+    }
+
+    llmService.setGroundingDocuments(documents);
+  }
+
+  broadcastAccountStatus(status, isError = false) {
+    windowManager.broadcastToAllWindows("account-status", {
+      status,
+      isError,
+      account: accountService.getStatus(),
+      groundingDocuments: llmService.getGroundingDocumentNames(),
+    });
+  }
+
   setupServiceEventHandlers() {
     speechService.on("recording-started", () => {
+      accountService.startSession(llmService.getModel());
       BrowserWindow.getAllWindows().forEach((window) => {
         window.webContents.send("recording-started");
       });
     });
 
     speechService.on("recording-stopped", () => {
+      accountService.endSession();
       BrowserWindow.getAllWindows().forEach((window) => {
         window.webContents.send("recording-stopped");
       });
@@ -216,6 +284,7 @@ class ApplicationController {
         window.webContents.send("transcription-received", { text });
       });
 
+      accountService.recordUtterance();
       this.queueTranscriptForLLM(text);
     });
 
@@ -260,6 +329,24 @@ class ApplicationController {
         logger.error("Failed to write to clipboard", { error: e.message });
         return false;
       }
+    });
+
+    ipcMain.handle("get-account-status", () => ({
+      ...accountService.getStatus(),
+      model: llmService.getModel(),
+      groundingDocuments: llmService.getGroundingDocumentNames(),
+    }));
+
+    ipcMain.handle("sync-account-config", async () => {
+      await this.syncAccountConfig();
+      return accountService.getStatus();
+    });
+
+    ipcMain.handle("unlink-account", () => {
+      accountService.unlink();
+      llmService.setGroundingDocuments([]);
+      this.broadcastAccountStatus("Unlinked from the dashboard account");
+      return accountService.getStatus();
     });
 
     ipcMain.handle("get-speech-availability", () => {
@@ -933,6 +1020,7 @@ class ApplicationController {
         isTranscriptionResponse: true
       });
 
+      accountService.recordAnswer();
       this.broadcastTranscriptionLLMResponse(llmResult);
 
       windowManager.showLLMResponse(llmResult.response, {
@@ -1031,6 +1119,7 @@ class ApplicationController {
 
   onWillQuit() {
     globalShortcut.unregisterAll();
+    accountService.endSession();
 
     if (this.transcriptDebounceTimer) {
       clearTimeout(this.transcriptDebounceTimer);
@@ -1083,6 +1172,7 @@ class ApplicationController {
         speechAvailable: this.speechAvailable,
         // include persisted key if present (UI expects to populate field)
         anthropicKey: persisted.anthropicKey || null,
+        account: accountService.getStatus(),
         llmStatus: llmService.getStats()
       };
     } catch (error) {
@@ -1409,5 +1499,5 @@ if (!gotSingleInstanceLock) {
   app.quit();
 } else {
   const controller = new ApplicationController();
-  app.on("second-instance", () => controller.handleSecondInstance());
+  app.on("second-instance", (event, argv) => controller.handleSecondInstance(argv));
 }

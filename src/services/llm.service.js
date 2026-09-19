@@ -7,6 +7,11 @@ const LANGUAGE_TITLES = { cpp: 'C++', c: 'C', python: 'Python', java: 'Java', ja
 const FENCE_TAGS = { cpp: 'cpp', c: 'c', python: 'python', java: 'java', javascript: 'javascript', js: 'javascript' };
 const SUPPORTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 
+const MAX_DOCUMENT_CHARS = 6000;
+const MAX_GROUNDING_CHARS = 24000;
+
+const CONFIDENCE_INSTRUCTION = `## Confidence\nEnd every answer with a final line of the form:\nConfidence: high|medium|low — <a few words on what the answer rests on>\nUse "high" only when the answer follows from the provided documents or from the transcript itself.`;
+
 const isElectronMainProcess = () => !!process.versions.electron && process.type === 'browser';
 
 // Captured before any settings override so clearing the key in Settings can
@@ -24,6 +29,8 @@ class LLMService {
     this.activeStream = null;
     this.activeController = null;
     this.latestRequestId = 0;
+    this.modelOverride = null;
+    this.groundingDocuments = [];
 
     this.initializeClient();
   }
@@ -58,7 +65,62 @@ class LLMService {
   }
 
   getModel() {
-    return config.get('llm.anthropic.model') || config.DEFAULT_MODEL;
+    return this.modelOverride || config.get('llm.anthropic.model') || config.DEFAULT_MODEL;
+  }
+
+  setModel(model) {
+    this.modelOverride = typeof model === 'string' && model.trim() ? model.trim() : null;
+    logger.info('Model preference updated', { model: this.getModel() });
+    return this.getModel();
+  }
+
+  /**
+   * Replace the document set that answers are grounded in. Documents are held
+   * in memory only and are sent as part of the system prompt.
+   */
+  setGroundingDocuments(documents = []) {
+    const cleaned = [];
+    let budget = MAX_GROUNDING_CHARS;
+
+    for (const document of Array.isArray(documents) ? documents : []) {
+      const filename = typeof document?.filename === 'string' ? document.filename : 'document';
+      const content = typeof document?.content === 'string' ? document.content.trim() : '';
+      if (!content || budget <= 0) continue;
+
+      const excerpt = content.slice(0, Math.min(MAX_DOCUMENT_CHARS, budget));
+      budget -= excerpt.length;
+      cleaned.push({ filename, content: excerpt });
+    }
+
+    this.groundingDocuments = cleaned;
+    logger.info('Grounding documents updated', { count: cleaned.length });
+    return cleaned.length;
+  }
+
+  getGroundingDocumentNames() {
+    return this.groundingDocuments.map(document => document.filename);
+  }
+
+  /**
+   * Combine the skill prompt with the user's documents and the confidence
+   * instruction into the single top-level system parameter Claude expects.
+   */
+  composeSystem(basePrompt) {
+    const sections = [];
+    if (basePrompt && basePrompt.trim()) sections.push(basePrompt.trim());
+
+    if (this.groundingDocuments.length > 0) {
+      const documents = this.groundingDocuments
+        .map(document => `<document name="${document.filename}">\n${document.content}\n</document>`)
+        .join('\n\n');
+
+      sections.push(
+        `## Personal Documents\nThese belong to the person you are assisting. Prefer them over your own knowledge and name the document you used.\n\n${documents}`
+      );
+    }
+
+    sections.push(CONFIDENCE_INSTRUCTION);
+    return sections.join('\n\n');
   }
 
   updateApiKey(apiKey) {
@@ -86,6 +148,7 @@ class LLMService {
       hasApiKey: !!(this.apiKey || config.getApiKey('ANTHROPIC')),
       provider: 'anthropic',
       model: this.getModel(),
+      groundingDocuments: this.groundingDocuments.length,
       streaming: !!config.get('llm.anthropic.streaming'),
       isInitialized: this.isInitialized,
       requestCount: this.requestCount,
@@ -332,7 +395,8 @@ You are assisting someone during a live call, meeting, or research session. You 
       temperature: config.get('llm.anthropic.temperature'),
       messages: request.messages
     };
-    if (request.system) payload.system = request.system;
+    const system = this.composeSystem(request.system);
+    if (system) payload.system = system;
 
     const shouldStream = !!onDelta && !!config.get('llm.anthropic.streaming');
 

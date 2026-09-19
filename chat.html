@@ -1193,6 +1193,17 @@
           addMessage('Session memory has been cleared', 'system');
         });
 
+        // Dashboard account link status (opencluely:// launch links)
+        if (whysperAPI.onAccountStatus) {
+          whysperAPI.onAccountStatus((event, data) => {
+            if (!data || !data.status) return;
+
+            const documents = Array.isArray(data.groundingDocuments) ? data.groundingDocuments : [];
+            const suffix = documents.length ? ` · grounding: ${documents.join(', ')}` : '';
+            addMessage(`${data.status}${suffix}`, data.isError ? 'error' : 'system');
+          });
+        }
+
         // Replace transcription LLM handler to store text + snippets
         whysperAPI.onTranscriptionLlmResponse((event, data) => {
           if (data && data.response) {

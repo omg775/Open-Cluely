@@ -102,6 +102,23 @@ Audio never leaves the machine when using local Whisper: ffmpeg captures 16 kHz 
 
 ---
 
+## Web dashboard (optional)
+
+`web/` is a Next.js app (landing page + account dashboard) that can be deployed to Vercel with any Postgres database, including Neon. It is optional: the desktop app runs standalone with a key in `.env`.
+
+```bash
+cd web
+cp .env.example .env.local   # DATABASE_URL, SESSION_SECRET, NEXT_PUBLIC_APP_URL
+npm install
+npm run dev
+```
+
+The dashboard stores an Anthropic key (encrypted at rest with AES-256-GCM), a model preference, and grounding documents, and shows session metadata only — start time, duration, utterance and answer counts. Transcripts and answers never leave the machine.
+
+**Linking the desktop app.** Dashboard → Launch mints a single-use token valid for two minutes and opens `opencluely://auth?token=…&api=…`. The desktop app registers that protocol, exchanges the token for a long-lived device token at `POST /api/device/exchange`, stores it in the Electron user-data directory with `0600` permissions, and then applies the account's key, model, and documents. `GET /api/device/config` refreshes them on later launches; revoking the device in the dashboard makes the next refresh fail and unlinks the desktop app. If the protocol is not registered (for example when running from source on Linux), the Launch page also shows the local-run instructions.
+
+---
+
 ## Shortcuts
 
 | Shortcut | Action |
