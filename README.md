@@ -102,6 +102,29 @@ Audio never leaves the machine when using local Whisper: ffmpeg captures 16 kHz 
 
 ---
 
+## Hosted web app
+
+`web/` is a Next.js app that contains the landing page, the account dashboard **and** the assistant itself, deployable as a single Vercel project with any Postgres database, including Neon. Visitors sign up and use it in the browser — no clone, no install, no API key.
+
+```bash
+cd web
+cp .env.example .env.local   # DATABASE_URL, SESSION_SECRET, ANTHROPIC_API_KEY, NEXT_PUBLIC_APP_URL
+npm install
+npm run dev
+```
+
+**Where the Anthropic key lives.** Only `web/src/lib/anthropic.ts` reads `process.env.ANTHROPIC_API_KEY`, and that module is `server-only`. The browser posts to `/api/assistant`, which authenticates the session cookie, calls Claude server-side and streams text back. No key is stored per user, returned by any response, or included in a deep link. Because one key serves everyone, `ASSISTANT_DAILY_REQUEST_LIMIT` caps answers per account per rolling 24 hours.
+
+**In the browser.** `getDisplayMedia()` captures the window or tab you choose and frames are sent as JPEG image blocks; `getUserMedia()` plus the Web Speech API (Chrome and Edge) produce the transcript. A browser tab cannot hide itself from a screen share and cannot capture the far end's audio unless that audio plays in a shared tab — the desktop app below is still the way to get the invisible overlay and system-loopback capture.
+
+The dashboard keeps a model preference, grounding documents, and session metadata only — start time, duration, utterance and answer counts. No transcript, screenshot or answer content is stored.
+
+**Linking the desktop app.** Dashboard → Desktop app mints a single-use token valid for two minutes and opens `opencluely://auth?token=…&api=…`. The desktop app registers that protocol, exchanges the token for a long-lived device token at `POST /api/device/exchange`, stores it in the Electron user-data directory with `0600` permissions, and then applies the account's model and documents — never a key; the desktop build uses its own `ANTHROPIC_API_KEY` from `.env`. `GET /api/device/config` refreshes them on later launches; revoking the device in the dashboard makes the next refresh fail and unlinks the desktop app.
+
+Launch links are attacker-reachable, so the desktop app only accepts an `api=` origin that is `https` (or loopback for local development). Set `OPENCLUELY_API_URL` in the desktop app's `.env` to pin it to a single dashboard origin.
+
+---
+
 ## Shortcuts
 
 | Shortcut | Action |
@@ -145,7 +168,7 @@ Transcription is a separate step and does not go through Claude: audio is transc
 
 ## Troubleshooting
 
-- **"Claude is not configured"** — `ANTHROPIC_API_KEY` is missing from `.env` and no key was set in Settings.
+- **"Claude is not configured"** — `ANTHROPIC_API_KEY` is missing from `.env`.
 - **Overlay shows an error line** — the message is the API failure reason (auth, rate limit, timeout, network). Settings → Test Connection isolates credential problems.
 - **No transcription** — run `npm run test-speech`. Local Whisper needs `ffmpeg` on `PATH` (or `FFMPEG_PATH`) and a whisper.cpp binary plus a model in `WHISPER_MODEL_DIR`; Azure needs `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION`.
 - **Only your own voice is transcribed** — no loopback device was found; see "Hearing the other side of a call".

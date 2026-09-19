@@ -896,25 +896,17 @@ class MainWindowUI {
                     <button class="text-gray-400 hover:text-white" onclick="this.closest('.fixed').remove()">✕</button>
                 </div>
 
-                <div class="mb-4 p-3 rounded ${status.hasApiKey ? 'bg-green-900' : 'bg-red-900'}">
-                    <p><strong>Status:</strong> ${status.hasApiKey ? 'Configured' : 'Not Configured'}</p>
+                <div class="mb-4 p-3 rounded ${status.isInitialized ? 'bg-green-900' : 'bg-red-900'}">
+                    <p><strong>Status:</strong> ${status.isInitialized ? 'Configured' : 'Not Configured'}</p>
+                    <p><strong>Claude access:</strong> ${status.hostedClaude ? 'Through your OpenCluely account' : status.hasApiKey ? 'Local ANTHROPIC_API_KEY' : 'None'}</p>
                     <p><strong>Model:</strong> ${status.model}</p>
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2">Anthropic API Key:</label>
-                    <input type="password" id="anthropicApiKey" placeholder="sk-ant-..."
-                           class="w-full p-2 bg-gray-800 border border-gray-600 rounded text-white">
-                    <p class="text-xs text-gray-400 mt-1">
-                        Create a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" class="text-blue-400">console.anthropic.com</a>,
-                        or set ANTHROPIC_API_KEY in your .env file.
-                    </p>
-                </div>
+                <p class="text-xs text-gray-400 mb-4">
+                    Sign in from the dashboard and answers run on our servers — no API key needed here.
+                </p>
 
                 <div class="flex space-x-2">
-                    <button onclick="mainWindowUI.configureLlm()" class="flex-1 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
-                        Configure
-                    </button>
                     <button onclick="mainWindowUI.testLlmConnection()" class="flex-1 bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
                         Test Connection
                     </button>
@@ -928,36 +920,6 @@ class MainWindowUI {
             </div>
         `;
         return modal;
-    }
-
-    async configureLlm() {
-        const apiKey = document.getElementById('anthropicApiKey').value.trim();
-        if (!apiKey) {
-            this.showNotification('Please enter an API key', 'error');
-            return;
-        }
-
-        try {
-            const result = await window.electronAPI.setLlmApiKey(apiKey);
-            if (result.success) {
-                this.showNotification('Anthropic API key configured', 'success');
-                document.querySelector('.fixed').remove();
-
-                logger.info('Anthropic API key configured', { component: 'MainWindowUI' });
-            } else {
-                this.showNotification(`Configuration failed: ${result.error}`, 'error');
-                logger.error('Claude configuration failed', {
-                    component: 'MainWindowUI',
-                    error: result.error
-                });
-            }
-        } catch (error) {
-            this.showNotification(`Error: ${error.message}`, 'error');
-            logger.error('Claude configuration error', {
-                component: 'MainWindowUI',
-                error: error.message
-            });
-        }
     }
 
     async testLlmConnection() {

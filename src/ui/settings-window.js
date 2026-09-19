@@ -15,9 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const endpointSilenceMsInput = document.getElementById('endpointSilenceMs');
     const audioSourceSelect = document.getElementById('audioSource');
     const audioDeviceInput = document.getElementById('audioDevice');
-    const anthropicKeyInput = document.getElementById('anthropicKey');
     const testLlmBtn = document.getElementById('testLlmBtn');
     const llmTestFeedback = document.getElementById('llmTestFeedback');
+    const llmAccessStatus = document.getElementById('llmAccessStatus');
     const windowGapInput = document.getElementById('windowGap');
     const codingLanguageSelect = document.getElementById('codingLanguage');
     const activeSkillSelect = document.getElementById('activeSkill');
@@ -84,7 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (settings.endpointSilenceMs && endpointSilenceMsInput) endpointSilenceMsInput.value = settings.endpointSilenceMs;
         if (settings.audioSource && audioSourceSelect) audioSourceSelect.value = settings.audioSource;
         if (settings.audioDevice && audioDeviceInput) audioDeviceInput.value = settings.audioDevice;
-        if (settings.anthropicKey && anthropicKeyInput) anthropicKeyInput.value = settings.anthropicKey;
         if (settings.windowGap && windowGapInput) windowGapInput.value = settings.windowGap;
 
         // Set C++ as default if no coding language is specified
@@ -142,7 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (endpointSilenceMsInput) settings.endpointSilenceMs = endpointSilenceMsInput.value;
         if (audioSourceSelect) settings.audioSource = audioSourceSelect.value;
         if (audioDeviceInput) settings.audioDevice = audioDeviceInput.value.trim();
-        if (anthropicKeyInput) settings.anthropicKey = anthropicKeyInput.value.trim();
         if (windowGapInput) settings.windowGap = windowGapInput.value;
         if (codingLanguageSelect) settings.codingLanguage = codingLanguageSelect.value;
         if (activeSkillSelect) settings.activeSkill = activeSkillSelect.value;
@@ -180,7 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
         endpointSilenceMsInput,
         audioSourceSelect,
         audioDeviceInput,
-        anthropicKeyInput,
         windowGapInput
     ];
 
@@ -191,8 +188,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    async function refreshLlmAccessStatus() {
+        if (!llmAccessStatus) return;
+        try {
+            const status = await window.electronAPI.getLlmStatus();
+            llmAccessStatus.textContent = status?.hostedClaude
+                ? 'Through your OpenCluely account'
+                : status?.hasApiKey
+                    ? 'Local ANTHROPIC_API_KEY'
+                    : 'Not linked — open the dashboard and launch from there';
+        } catch {
+            llmAccessStatus.textContent = 'Unknown';
+        }
+    }
+
+    refreshLlmAccessStatus();
+
     if (testLlmBtn) {
         testLlmBtn.addEventListener('click', async () => {
+            refreshLlmAccessStatus();
             if (llmTestFeedback) llmTestFeedback.textContent = 'Testing...';
             try {
                 const result = await window.electronAPI.testLlmConnection();

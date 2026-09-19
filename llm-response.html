@@ -434,6 +434,37 @@
             border-color: rgba(76,175,80,0.95); 
             transform: scale(0.98);
         }
+        .confidence-badge {
+            margin-left: auto;
+            margin-right: 8px;
+            padding: 1px 7px;
+            border-radius: 9px;
+            font-size: 10px;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            border: 1px solid rgba(255,255,255,0.18);
+            color: rgba(255,255,255,0.75);
+            background: rgba(255,255,255,0.06);
+            white-space: nowrap;
+        }
+
+        .confidence-badge.high {
+            color: #8ee6a8;
+            border-color: rgba(76,175,80,0.45);
+            background: rgba(76,175,80,0.14);
+        }
+
+        .confidence-badge.medium {
+            color: #f0d48a;
+            border-color: rgba(255,193,7,0.45);
+            background: rgba(255,193,7,0.12);
+        }
+
+        .confidence-badge.low {
+            color: #f0a6a6;
+            border-color: rgba(244,67,54,0.45);
+            background: rgba(244,67,54,0.12);
+        }
     </style>
 </head>
 <body class="text-white">
@@ -441,6 +472,7 @@
         <!-- Draggable Header -->
         <div class="window-header">
             <div class="window-title">AI Response</div>
+            <div id="confidence-badge" class="confidence-badge hidden" title=""></div>
             <div class="window-controls">
                 <button id="close-window-btn" class="window-btn window-btn-close" title="Close">×</button>
             </div>
@@ -637,6 +669,7 @@
 
             streamBuffer = '';
             activeStreamId = streamId ?? null;
+            showConfidence(null);
             hideErrorState();
             hideLoadingState();
 
@@ -795,6 +828,40 @@
             };
         }
 
+        /**
+         * Claude ends answers with a "Confidence: level — reason" line; it is
+         * lifted out of the body and shown as a badge in the header.
+         */
+        function splitConfidence(response) {
+            const match = /\n\s*(?:\*\*)?confidence(?:\*\*)?\s*:\s*(high|medium|low)\b[^\n]*$/i.exec(response);
+            if (!match) return { body: response, level: null, detail: null };
+
+            return {
+                body: response.slice(0, match.index).trimEnd(),
+                level: match[1].toLowerCase(),
+                detail: match[0].trim().replace(/\*\*/g, '')
+            };
+        }
+
+        function showConfidence(level, detail) {
+            const badge = document.getElementById('confidence-badge');
+            if (!badge) return;
+
+            badge.classList.remove('high', 'medium', 'low');
+
+            if (!level) {
+                badge.classList.add('hidden');
+                badge.textContent = '';
+                badge.title = '';
+                return;
+            }
+
+            badge.classList.remove('hidden');
+            badge.classList.add(level);
+            badge.textContent = level;
+            badge.title = detail || '';
+        }
+
         function displayResponse(data) {
             // Show content
             const responseElement = document.getElementById('response-content');
@@ -806,8 +873,11 @@
             }
 
             // Parse the response - check both content and response properties for compatibility
-            const response = data.content || data.response;
-            
+            const raw = data.content || data.response;
+            const confidence = raw ? splitConfidence(raw) : { body: raw, level: null, detail: null };
+            const response = confidence.body;
+            showConfidence(confidence.level, confidence.detail);
+
             if (!response) {
                 console.error('No response data received', {
                     dataKeys: Object.keys(data),

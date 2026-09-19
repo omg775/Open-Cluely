@@ -16,6 +16,7 @@ app.commandLine.appendSwitch("no-pings");
 const captureService = require("./src/services/capture.service");
 const speechService = require("./src/services/speech.service");
 const llmService = require("./src/services/llm.service");
+const accountService = require("./src/services/account.service");
 
 // Managers
 const windowManager = require("./src/managers/window.manager");
@@ -24,6 +25,7 @@ const sessionManager = require("./src/managers/session.manager");
 class ApplicationController {
   constructor() {
     this.isReady = false;
+    this.sessionFlushed = false;
     this.activeSkill = "dsa";
     // Default to C++ so language is enforced from first run
     this.codingLanguage = "cpp";
@@ -73,6 +75,25 @@ class ApplicationController {
   }
 
   setupEventHandlers() {
+    // macOS delivers opencluely:// links through open-url, which can fire
+    // before the app is ready.
+    app.on("open-url", (event, url) => {
+      event.preventDefault();
+      this.handleDeepLink(url);
+    });
+
+    // Reporting the session end is a network round trip, so quitting is held
+    // back until it has been flushed.
+    app.on("before-quit", event => {
+      if (this.sessionFlushed || !accountService.hasUnreportedSession()) return;
+
+      event.preventDefault();
+      accountService.endSession().finally(() => {
+        this.sessionFlushed = true;
+        app.quit();
+      });
+    });
+
     app.whenReady().then(() => this.onAppReady());
     app.on("window-all-closed", () => this.onWindowAllClosed());
     app.on("activate", () => this.onActivate());
@@ -82,8 +103,11 @@ class ApplicationController {
     this.setupServiceEventHandlers();
   }
 
-  handleSecondInstance() {
+  handleSecondInstance(argv = []) {
     logger.info("Second instance launch detected; focusing existing windows");
+
+    const deepLink = accountService.findDeepLink(argv);
+    if (deepLink) this.handleDeepLink(deepLink);
 
     const focusExistingWindows = () => {
       try {
@@ -129,6 +153,7 @@ class ApplicationController {
 
     try {
       this.setupPermissions();
+      accountService.registerProtocol();
 
       // Small delay to ensure desktop/space detection is accurate
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -146,6 +171,13 @@ class ApplicationController {
       });
 
       sessionManager.addEvent("Application started");
+
+      const deepLink = accountService.findDeepLink(process.argv);
+      if (deepLink) {
+        this.handleDeepLink(deepLink);
+      } else if (accountService.load()) {
+        this.syncAccountConfig();
+      }
     } catch (error) {
       logger.error("Application initialization failed", {
         error: error.message,
@@ -194,14 +226,55 @@ class ApplicationController {
     });
   }
 
+  /**
+   * Link this app to a dashboard account from an opencluely:// launch link and
+   * apply the account's key, model and grounding documents.
+   */
+  async handleDeepLink(deepLink) {
+    try {
+      logger.info("Handling launch link");
+      const payload = await accountService.handleDeepLink(deepLink);
+      this.applyAccountPayload(payload);
+      this.broadcastAccountStatus(`Linked to ${accountService.getStatus().email || "your OpenCluely account"}`);
+    } catch (error) {
+      logger.error("Failed to handle launch link", { error: error.message });
+      this.broadcastAccountStatus(`Launch link failed: ${error.message}`, true);
+    }
+  }
+
+  async syncAccountConfig() {
+    try {
+      this.applyAccountPayload(await accountService.fetchConfig());
+      this.broadcastAccountStatus(`Synced settings for ${accountService.getStatus().email || "your account"}`);
+    } catch (error) {
+      logger.warn("Could not sync account settings", { error: error.message });
+    }
+  }
+
+  applyAccountPayload({ settings = {}, documents = [] } = {}) {
+    llmService.setModel(typeof settings.model === "string" ? settings.model : null);
+    llmService.setGroundingDocuments(documents);
+  }
+
+  broadcastAccountStatus(status, isError = false) {
+    windowManager.broadcastToAllWindows("account-status", {
+      status,
+      isError,
+      account: accountService.getStatus(),
+      groundingDocuments: llmService.getGroundingDocumentNames(),
+    });
+  }
+
   setupServiceEventHandlers() {
     speechService.on("recording-started", () => {
+      accountService.startSession(llmService.getModel());
       BrowserWindow.getAllWindows().forEach((window) => {
         window.webContents.send("recording-started");
       });
     });
 
     speechService.on("recording-stopped", () => {
+      accountService.endSession();
       BrowserWindow.getAllWindows().forEach((window) => {
         window.webContents.send("recording-stopped");
       });
@@ -216,6 +289,7 @@ class ApplicationController {
         window.webContents.send("transcription-received", { text });
       });
 
+      accountService.recordUtterance();
       this.queueTranscriptForLLM(text);
     });
 
@@ -260,6 +334,25 @@ class ApplicationController {
         logger.error("Failed to write to clipboard", { error: e.message });
         return false;
       }
+    });
+
+    ipcMain.handle("get-account-status", () => ({
+      ...accountService.getStatus(),
+      model: llmService.getModel(),
+      groundingDocuments: llmService.getGroundingDocumentNames(),
+    }));
+
+    ipcMain.handle("sync-account-config", async () => {
+      await this.syncAccountConfig();
+      return accountService.getStatus();
+    });
+
+    ipcMain.handle("unlink-account", () => {
+      accountService.unlink();
+      llmService.setGroundingDocuments([]);
+      llmService.setModel(null);
+      this.broadcastAccountStatus("Unlinked from the dashboard account");
+      return accountService.getStatus();
     });
 
     ipcMain.handle("get-speech-availability", () => {
@@ -412,12 +505,6 @@ class ApplicationController {
         logger.error('Failed to get skill prompt', { skillName, error: error.message });
         return null;
       }
-    });
-
-    ipcMain.handle("set-llm-api-key", (event, apiKey) => {
-      const result = llmService.updateApiKey(apiKey);
-      const stats = llmService.getStats();
-      return Object.assign({ success: !!result.success }, stats, result.error ? { error: result.error } : {});
     });
 
     ipcMain.handle("get-llm-status", () => {
@@ -933,6 +1020,7 @@ class ApplicationController {
         isTranscriptionResponse: true
       });
 
+      accountService.recordAnswer();
       this.broadcastTranscriptionLLMResponse(llmResult);
 
       windowManager.showLLMResponse(llmResult.response, {
@@ -1081,8 +1169,7 @@ class ApplicationController {
         // pass through env-derived settings for UI convenience (masked)
         azureConfigured: !!process.env.AZURE_SPEECH_KEY && !!process.env.AZURE_SPEECH_REGION,
         speechAvailable: this.speechAvailable,
-        // include persisted key if present (UI expects to populate field)
-        anthropicKey: persisted.anthropicKey || null,
+        account: accountService.getStatus(),
         llmStatus: llmService.getStats()
       };
     } catch (error) {
@@ -1093,7 +1180,6 @@ class ApplicationController {
         selectedIcon: this.appIcon || "terminal",
         azureConfigured: !!process.env.AZURE_SPEECH_KEY && !!process.env.AZURE_SPEECH_REGION,
         speechAvailable: this.speechAvailable,
-        anthropicKey: null,
         llmStatus: llmService.getStats()
       };
     }
@@ -1132,19 +1218,7 @@ class ApplicationController {
 
       this.applySpeechSettings(settings);
 
-      // Apply an Anthropic key supplied via the settings UI immediately; an
-      // explicitly emptied field clears the override and falls back to .env.
-      if (typeof settings.anthropicKey === 'string') {
-        try {
-          llmService.updateApiKey(settings.anthropicKey || null);
-        } catch (e) {
-          logger.error('Failed to apply Anthropic API key from settings', { error: e.message });
-        }
-      }
-
-      const loggableSettings = Object.assign({}, settings);
-      if (loggableSettings.anthropicKey) loggableSettings.anthropicKey = '***REDACTED***';
-      logger.info("Settings saved successfully", loggableSettings);
+      logger.info("Settings saved successfully", settings);
       return { success: true };
     } catch (error) {
       logger.error("Failed to save settings", { error: error.message });
@@ -1187,7 +1261,8 @@ class ApplicationController {
       }
 
       const merged = Object.assign({}, existing, settings);
-      if (settings.anthropicKey === '') delete merged.anthropicKey;
+      // The key now comes from the environment only, so any legacy stored key goes.
+      delete merged.anthropicKey;
 
       // Ensure directory exists
       try {
@@ -1196,10 +1271,7 @@ class ApplicationController {
 
       fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2), { mode: 0o600 });
 
-      // Do not log sensitive values like API keys
-      const safeLog = Object.assign({}, settings);
-      if (safeLog.anthropicKey) safeLog.anthropicKey = '***REDACTED***';
-      logger.debug('Settings persisted to disk', { path: settingsPath, settings: safeLog });
+      logger.debug('Settings persisted to disk', { path: settingsPath, settings });
     } catch (error) {
       logger.error('Failed to persist settings', { error: error.message });
     }
@@ -1226,13 +1298,11 @@ class ApplicationController {
 
       speechService.updateSettings(persisted);
 
-      // An env-provided key always wins over a stored one
-      if (persisted.anthropicKey && !config.getApiKey('ANTHROPIC')) {
-        try {
-          llmService.updateApiKey(persisted.anthropicKey);
-        } catch (e) {
-          logger.error('Failed to apply persisted Anthropic key at startup', { error: e.message });
-        }
+      // Older builds stored a user-entered key here; drop it now that the key
+      // only ever comes from the environment.
+      if (persisted.anthropicKey) {
+        delete persisted.anthropicKey;
+        this.persistSettings({});
       }
 
       logger.info('Persisted settings loaded', { path: settingsPath, keys: Object.keys(persisted) });
@@ -1409,5 +1479,5 @@ if (!gotSingleInstanceLock) {
   app.quit();
 } else {
   const controller = new ApplicationController();
-  app.on("second-instance", () => controller.handleSecondInstance());
+  app.on("second-instance", (event, argv) => controller.handleSecondInstance(argv));
 }
