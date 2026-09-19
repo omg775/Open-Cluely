@@ -9,6 +9,10 @@ const SUPPORTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/we
 
 const isElectronMainProcess = () => !!process.versions.electron && process.type === 'browser';
 
+// Captured before any settings override so clearing the key in Settings can
+// fall back to the value from .env instead of leaving the app unconfigured.
+const ENV_API_KEY = process.env.ANTHROPIC_API_KEY;
+
 class LLMService {
   constructor() {
     this.client = null;
@@ -63,6 +67,8 @@ class LLMService {
 
       if (this.apiKey) {
         process.env.ANTHROPIC_API_KEY = this.apiKey;
+      } else if (ENV_API_KEY) {
+        process.env.ANTHROPIC_API_KEY = ENV_API_KEY;
       } else {
         delete process.env.ANTHROPIC_API_KEY;
       }

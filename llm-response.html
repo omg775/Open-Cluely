@@ -13,7 +13,9 @@
         .mr-2 { margin-right: 0.5rem; }
 
         body {
-            background: linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(20, 20, 20, 0.5) 100%);;
+            /* Opaque enough that busy backgrounds never bleed into the text. */
+            background: linear-gradient(135deg, rgba(8, 8, 10, 0.88) 0%, rgba(20, 20, 24, 0.92) 100%);
+            backdrop-filter: blur(18px) saturate(120%);
             -webkit-app-region: no-drag;
             color: white;
             margin: 0;
@@ -43,14 +45,14 @@
         .markdown-content ul, .markdown-content ol { margin-bottom: 0.8rem; padding-left: 1.2rem; font-size: 0.875rem; }
         .markdown-content li { margin-bottom: 0.4rem; color: white; font-size: 0.875rem; }
         .markdown-content code { 
-            background-color: rgba(0, 0, 0, 0.4); 
+            background-color: rgba(0, 0, 0, 0.6); 
             padding: 0.2rem 0.4rem; 
             border-radius: 0.25rem; 
             font-family: 'Courier New', monospace;
             color: #e5e7eb;
         }
         .markdown-content pre { 
-            background-color: rgba(0, 0, 0, 0.4); 
+            background-color: rgba(0, 0, 0, 0.6); 
             padding: 1rem; 
             border-radius: 0.5rem; 
             margin: 1rem 0;
